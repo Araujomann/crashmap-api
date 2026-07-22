@@ -28,4 +28,8 @@ export const env = {
     NODE_ENV: process.env.NODE_ENV ?? "development",
     PORT: readPort(process.env.PORT),
     DATABASE_URL: readRequiredEnv("DATABASE_URL"),
+    ACCESS_TOKEN_SECRET: readRequiredEnv("ACCESS_TOKEN_SECRET"),
+    REFRESH_TOKEN_SECRET: readRequiredEnv("REFRESH_TOKEN_SECRET"),
+    ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
+    REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
 } as const;
