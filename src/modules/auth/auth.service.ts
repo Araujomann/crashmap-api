@@ -94,7 +94,10 @@ function decodeBase64UrlJson<T>(value: string): T {
     return JSON.parse(decoded) as T;
 }
 
-function verifyHmacSignature(unsignedToken: string, signature: string): boolean {
+function verifyHmacSignature(
+    unsignedToken: string,
+    signature: string,
+): boolean {
     const expectedSignature = Buffer.from(
         createHmac("sha256", env.ACCESS_TOKEN_SECRET)
             .update(unsignedToken)
