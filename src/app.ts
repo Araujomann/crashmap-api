@@ -3,6 +3,7 @@ import { prisma } from "./shared/database/prisma.js";
 import { AppError } from "./shared/errors/app-error.js";
 import { buildDataResponseSchema } from "./shared/http/api-response.js";
 import { authRoutes } from "./modules/auth/auth.controller.js";
+import { usersRoutes } from "./modules/users/users.controller.js";
 
 const healthDataSchema = {
     type: "object",
@@ -55,6 +56,7 @@ export async function buildApp() {
     });
 
     app.register(authRoutes, { prefix: "/auth" });
+    app.register(usersRoutes, { prefix: "/users" });
 
     app.get(
         "/health",
