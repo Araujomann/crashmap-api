@@ -16,7 +16,10 @@ import {
     listAccidents,
     updateAccident,
 } from "./accidents.service.js";
-import type { CreateAccidentBody, UpdateAccidentBody } from "./accidents.types.js";
+import type {
+    CreateAccidentBody,
+    UpdateAccidentBody,
+} from "./accidents.types.js";
 
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.get(
@@ -108,7 +111,10 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             },
         },
         async (request, reply) => {
-            await deleteAccident(request.authUser as AuthUser, request.params.id);
+            await deleteAccident(
+                request.authUser as AuthUser,
+                request.params.id,
+            );
 
             return reply.code(200).send({ data: { deleted: true } });
         },
