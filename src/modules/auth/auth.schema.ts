@@ -67,6 +67,15 @@ export const authResponseSchema = {
     },
 } as const;
 
+export const meResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: authUserSchema,
+    },
+} as const;
+
 export const logoutResponseSchema = {
     type: "object",
     additionalProperties: false,

@@ -3,6 +3,7 @@ import {
     authResponseSchema,
     loginBodySchema,
     logoutResponseSchema,
+    meResponseSchema,
     refreshBodySchema,
     registerBodySchema,
 } from "./auth.schema.js";
@@ -12,6 +13,7 @@ import {
     refreshSession,
     registerUser,
 } from "./auth.service.js";
+import { requireAuthenticatedUser } from "./auth.guard.js";
 import type {
     LoginBody,
     LogoutBody,
@@ -85,6 +87,21 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             await logoutUser(request.body);
 
             return reply.code(200).send({ data: { revoked: true } });
+        },
+    );
+
+    app.get(
+        "/me",
+        {
+            preHandler: requireAuthenticatedUser,
+            schema: {
+                response: {
+                    200: meResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            return reply.code(200).send({ data: request.authUser! });
         },
     );
 };

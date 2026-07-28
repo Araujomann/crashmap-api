@@ -9,6 +9,7 @@ import { env } from "../../shared/config/env.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type {
+    AccessTokenPayload,
     AuthResponse,
     AuthTokens,
     AuthUser,
@@ -87,6 +88,28 @@ function base64UrlJson(value: object) {
     return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
+function decodeBase64UrlJson<T>(value: string): T {
+    const decoded = Buffer.from(value, "base64url").toString("utf8");
+
+    return JSON.parse(decoded) as T;
+}
+
+function verifyHmacSignature(unsignedToken: string, signature: string): boolean {
+    const expectedSignature = Buffer.from(
+        createHmac("sha256", env.ACCESS_TOKEN_SECRET)
+            .update(unsignedToken)
+            .digest("base64url"),
+        "base64url",
+    );
+    const receivedSignature = Buffer.from(signature, "base64url");
+
+    if (expectedSignature.length !== receivedSignature.length) {
+        return false;
+    }
+
+    return timingSafeEqual(expectedSignature, receivedSignature);
+}
+
 function parseDurationToSeconds(duration: string): number {
     const match = /^([1-9]\d*)([smhd])$/.exec(duration);
 
@@ -125,6 +148,58 @@ export function signAccessToken(payload: TokenPayload): string {
         .digest("base64url");
 
     return `${unsignedToken}.${signature}`;
+}
+
+export function verifyAccessToken(token: string): AccessTokenPayload {
+    const [headerPart, payloadPart, signaturePart] = token.split(".");
+
+    if (!headerPart || !payloadPart || !signaturePart) {
+        throw new AuthError(
+            "Invalid access token",
+            401,
+            "AUTH_INVALID_ACCESS_TOKEN",
+        );
+    }
+
+    const unsignedToken = `${headerPart}.${payloadPart}`;
+
+    if (!verifyHmacSignature(unsignedToken, signaturePart)) {
+        throw new AuthError(
+            "Invalid access token",
+            401,
+            "AUTH_INVALID_ACCESS_TOKEN",
+        );
+    }
+
+    const header = decodeBase64UrlJson<{ alg?: string; typ?: string }>(
+        headerPart,
+    );
+    const payload = decodeBase64UrlJson<AccessTokenPayload>(payloadPart);
+
+    if (header.alg !== "HS256" || header.typ !== "JWT") {
+        throw new AuthError(
+            "Invalid access token",
+            401,
+            "AUTH_INVALID_ACCESS_TOKEN",
+        );
+    }
+
+    if (
+        typeof payload.sub !== "string" ||
+        typeof payload.email !== "string" ||
+        typeof payload.role !== "string" ||
+        payload.type !== "access" ||
+        !Number.isInteger(payload.exp) ||
+        payload.exp <= Math.floor(Date.now() / 1000)
+    ) {
+        throw new AuthError(
+            "Invalid or expired access token",
+            401,
+            "AUTH_INVALID_ACCESS_TOKEN",
+        );
+    }
+
+    return payload;
 }
 
 export function generateRefreshToken() {

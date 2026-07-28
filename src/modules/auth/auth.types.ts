@@ -1,4 +1,14 @@
 export type UserRole = "user" | "moderator" | "admin";
+
+export interface AccessTokenPayload {
+    sub: string;
+    email: string;
+    role: UserRole;
+    type: "access";
+    iat: number;
+    exp: number;
+}
+
 export interface AuthUser {
     id: string;
     name: string;
