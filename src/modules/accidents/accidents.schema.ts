@@ -32,6 +32,67 @@ export const accidentSchema = {
     },
 } as const;
 
+export const accidentCommentSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: [
+        "id",
+        "accident_id",
+        "created_by_id",
+        "body",
+        "created_at",
+        "updated_at",
+    ],
+    properties: {
+        id: { type: "string" },
+        accident_id: { type: "string" },
+        created_by_id: { type: "string" },
+        body: { type: "string" },
+        created_at: { type: "string", format: "date-time" },
+        updated_at: { type: "string", format: "date-time" },
+    },
+} as const;
+
+export const accidentImageSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: [
+        "id",
+        "accident_id",
+        "created_by_id",
+        "image_url",
+        "caption",
+        "created_at",
+        "updated_at",
+    ],
+    properties: {
+        id: { type: "string" },
+        accident_id: { type: "string" },
+        created_by_id: { type: "string" },
+        image_url: { type: "string" },
+        caption: { type: ["string", "null"] },
+        created_at: { type: "string", format: "date-time" },
+        updated_at: { type: "string", format: "date-time" },
+    },
+} as const;
+
+export const accidentDetailSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: [...accidentSchema.required, "comments", "images"],
+    properties: {
+        ...accidentSchema.properties,
+        comments: {
+            type: "array",
+            items: accidentCommentSchema,
+        },
+        images: {
+            type: "array",
+            items: accidentImageSchema,
+        },
+    },
+} as const;
+
 export const createAccidentBodySchema = {
     type: "object",
     additionalProperties: false,
@@ -43,6 +104,25 @@ export const createAccidentBodySchema = {
         longitude: { type: "number", minimum: -180, maximum: 180 },
         occurredAt: { type: "string", format: "date-time" },
         severity: accidentSeveritySchema,
+    },
+} as const;
+
+export const createAccidentCommentBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["body"],
+    properties: {
+        body: { type: "string", minLength: 1, maxLength: 2000 },
+    },
+} as const;
+
+export const createAccidentImageBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["imageUrl"],
+    properties: {
+        imageUrl: { type: "string", minLength: 8, maxLength: 2048 },
+        caption: { type: ["string", "null"], maxLength: 255 },
     },
 } as const;
 
@@ -76,7 +156,31 @@ export const accidentResponseSchema = {
     additionalProperties: false,
     required: ["data"],
     properties: {
-        data: accidentSchema,
+        data: accidentDetailSchema,
+    },
+} as const;
+
+export const accidentCommentsListResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "array",
+            items: accidentCommentSchema,
+        },
+    },
+} as const;
+
+export const accidentImagesListResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "array",
+            items: accidentImageSchema,
+        },
     },
 } as const;
 

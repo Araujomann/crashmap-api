@@ -32,6 +32,8 @@ model User {
   updated_at DateTime @updatedAt
 
   accidents Accident[]
+  accident_comments AccidentComment[]
+  accident_images AccidentImage[]
   refresh_tokens RefreshToken[]
 }
 
@@ -48,10 +50,45 @@ model Accident {
   updated_at DateTime @updatedAt
 
   created_by User? @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  comments AccidentComment[]
+  images AccidentImage[]
 
   @@index([created_by_id])
   @@index([occurred_at])
   @@index([severity])
+}
+
+model AccidentComment {
+  id String @id @default(uuid())
+  accident_id String
+  created_by_id String
+  body String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  accident Accident @relation(fields: [accident_id], references: [id], onDelete: Cascade)
+  created_by User @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
+
+  @@index([accident_id])
+  @@index([created_by_id])
+  @@index([created_at])
+}
+
+model AccidentImage {
+  id String @id @default(uuid())
+  accident_id String
+  created_by_id String
+  image_url String
+  caption String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  accident Accident @relation(fields: [accident_id], references: [id], onDelete: Cascade)
+  created_by User @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
+
+  @@index([accident_id])
+  @@index([created_by_id])
+  @@index([created_at])
 }
 
 model RefreshToken {
