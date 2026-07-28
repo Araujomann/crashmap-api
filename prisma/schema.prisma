@@ -14,6 +14,13 @@ enum role {
   admin
 }
 
+enum accident_severity {
+  low
+  medium
+  high
+  critical
+}
+
 model User {
   id  String @id @default(uuid())
   name String
@@ -24,7 +31,27 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  accidents Accident[]
   refresh_tokens RefreshToken[]
+}
+
+model Accident {
+  id String @id @default(uuid())
+  title String
+  description String?
+  latitude Float
+  longitude Float
+  occurred_at DateTime
+  severity accident_severity
+  created_by_id String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  created_by User? @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+
+  @@index([created_by_id])
+  @@index([occurred_at])
+  @@index([severity])
 }
 
 model RefreshToken {

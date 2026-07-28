@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import { prisma } from "./shared/database/prisma.js";
 import { AppError } from "./shared/errors/app-error.js";
 import { buildDataResponseSchema } from "./shared/http/api-response.js";
+import { accidentsRoutes } from "./modules/accidents/accidents.controller.js";
 import { authRoutes } from "./modules/auth/auth.controller.js";
 import { usersRoutes } from "./modules/users/users.controller.js";
 
@@ -57,6 +58,7 @@ export async function buildApp() {
 
     app.register(authRoutes, { prefix: "/auth" });
     app.register(usersRoutes, { prefix: "/users" });
+    app.register(accidentsRoutes, { prefix: "/accidents" });
 
     app.get(
         "/health",
