@@ -116,16 +116,6 @@ export const createAccidentCommentBodySchema = {
     },
 } as const;
 
-export const createAccidentImageBodySchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["imageUrl"],
-    properties: {
-        imageUrl: { type: "string", minLength: 8, maxLength: 2048 },
-        caption: { type: ["string", "null"], maxLength: 255 },
-    },
-} as const;
-
 export const updateAccidentBodySchema = {
     type: "object",
     additionalProperties: false,
@@ -157,6 +147,15 @@ export const accidentResponseSchema = {
     required: ["data"],
     properties: {
         data: accidentDetailSchema,
+    },
+} as const;
+
+export const accidentCreateResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: accidentSchema,
     },
 } as const;
 

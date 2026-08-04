@@ -1,5 +1,6 @@
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
+import { uploadImageToCloudinary } from "../../shared/services/storage/cloudinary.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import type {
     Accident,
@@ -365,11 +366,16 @@ export async function createAccidentImage(
 ): Promise<AccidentImage> {
     await ensureAccidentExists(accidentId);
 
+    const uploadedImage = await uploadImageToCloudinary(
+        input.fileBuffer,
+        `accidents/${accidentId}`,
+    );
+
     const image = await prisma.accidentImage.create({
         data: {
             accident_id: accidentId,
             created_by_id: user.id,
-            image_url: input.imageUrl.trim(),
+            image_url: uploadedImage.secureUrl,
             caption: input.caption?.trim() || null,
         },
     });

@@ -62,7 +62,7 @@ export interface CreateAccidentCommentBody {
 }
 
 export interface CreateAccidentImageBody {
-    imageUrl: string;
+    fileBuffer: Buffer;
     caption?: string | null;
 }
 

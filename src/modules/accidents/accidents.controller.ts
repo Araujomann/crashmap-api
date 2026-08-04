@@ -5,10 +5,10 @@ import {
     accidentIdParamsSchema,
     accidentCommentsListResponseSchema,
     accidentImagesListResponseSchema,
+    accidentCreateResponseSchema,
     accidentResponseSchema,
     accidentsListResponseSchema,
     createAccidentCommentBodySchema,
-    createAccidentImageBodySchema,
     createAccidentBodySchema,
     deletedAccidentResponseSchema,
     accidentCommentSchema,
@@ -34,6 +34,20 @@ import type {
     CreateAccidentBody,
     UpdateAccidentBody,
 } from "./accidents.types.js";
+
+interface AccidentImageUploadRequest {
+    params: {
+        id: string;
+    };
+    body: {
+        caption?: string;
+    };
+    file?: {
+        filename: string;
+        mimetype: string;
+        buffer: Buffer;
+    };
+}
 
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.get(
@@ -163,13 +177,12 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         },
     );
 
-    app.post<{ Params: { id: string }; Body: CreateAccidentImageBody }>(
+    app.post(
         "/:id/images",
         {
             preHandler: requireAuthenticatedUser,
             schema: {
                 params: accidentIdParamsSchema,
-                body: createAccidentImageBodySchema,
                 response: {
                     201: {
                         type: "object",
@@ -183,10 +196,25 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             },
         },
         async (request, reply) => {
+            const typedRequest =
+                request as unknown as AccidentImageUploadRequest;
+            if (!typedRequest.file) {
+                return reply.code(400 as 201).send({
+                    error: {
+                        code: "IMAGE_FILE_REQUIRED",
+                        message: "An image file is required",
+                        statusCode: 400,
+                    },
+                });
+            }
+
             const image = await createAccidentImage(
                 request.authUser as AuthUser,
-                request.params.id,
-                request.body,
+                typedRequest.params.id,
+                {
+                    fileBuffer: typedRequest.file.buffer,
+                    caption: typedRequest.body?.caption ?? null,
+                } as CreateAccidentImageBody,
             );
 
             return reply.code(201).send({ data: image });
@@ -230,7 +258,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             schema: {
                 body: createAccidentBodySchema,
                 response: {
-                    201: accidentResponseSchema,
+                    201: accidentCreateResponseSchema,
                 },
             },
         },
@@ -252,7 +280,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
                 params: accidentIdParamsSchema,
                 body: updateAccidentBodySchema,
                 response: {
-                    200: accidentResponseSchema,
+                    200: accidentCreateResponseSchema,
                 },
             },
         },

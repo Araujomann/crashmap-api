@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import multipart from "@fastify/multipart";
 import { prisma } from "./shared/database/prisma.js";
 import { AppError } from "./shared/errors/app-error.js";
 import { buildDataResponseSchema } from "./shared/http/api-response.js";
@@ -19,6 +20,12 @@ const healthDataSchema = {
 
 export async function buildApp() {
     const app = Fastify({ logger: true });
+
+    await app.register(multipart, {
+        limits: {
+            fileSize: 10 * 1024 * 1024,
+        },
+    });
 
     app.setErrorHandler(async (error, request, reply) => {
         request.log.error({ err: error }, "request failed");
