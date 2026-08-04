@@ -54,6 +54,12 @@ export interface AccidentListQuery {
     search?: string;
     severity?: AccidentSeverity;
     sort?: "newest" | "oldest";
+    from?: string;
+    to?: string;
+    minLat?: number;
+    maxLat?: number;
+    minLng?: number;
+    maxLng?: number;
 }
 
 export interface AccidentListResult {

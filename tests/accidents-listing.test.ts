@@ -43,6 +43,12 @@ test("listAccidents supports pagination, search, and severity filters", async ()
             search: marker,
             severity: "medium",
             sort: "newest",
+            from: "2026-08-01T00:00:00.000Z",
+            to: "2026-08-01T23:59:59.000Z",
+            minLat: -24,
+            maxLat: -23,
+            minLng: -47,
+            maxLng: -46,
         });
 
         assert.equal(result.data.length, 1);

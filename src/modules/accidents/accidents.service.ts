@@ -164,6 +164,13 @@ export async function listAccidents(
     const severity = query.severity;
     const sort = query.sort ?? "newest";
 
+    const from = query.from ? new Date(query.from) : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
+    const minLat = query.minLat;
+    const maxLat = query.maxLat;
+    const minLng = query.minLng;
+    const maxLng = query.maxLng;
+
     const where = {
         ...(search
             ? {
@@ -184,6 +191,30 @@ export async function listAccidents(
               }
             : {}),
         ...(severity ? { severity } : {}),
+        ...(from || to
+            ? {
+                  occurred_at: {
+                      ...(from ? { gte: from } : {}),
+                      ...(to ? { lte: to } : {}),
+                  },
+              }
+            : {}),
+        ...(minLat !== undefined || maxLat !== undefined
+            ? {
+                  latitude: {
+                      ...(minLat !== undefined ? { gte: minLat } : {}),
+                      ...(maxLat !== undefined ? { lte: maxLat } : {}),
+                  },
+              }
+            : {}),
+        ...(minLng !== undefined || maxLng !== undefined
+            ? {
+                  longitude: {
+                      ...(minLng !== undefined ? { gte: minLng } : {}),
+                      ...(maxLng !== undefined ? { lte: maxLng } : {}),
+                  },
+              }
+            : {}),
     };
 
     const [total, accidents] = await prisma.$transaction([
