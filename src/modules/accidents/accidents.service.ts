@@ -7,6 +7,8 @@ import type {
     AccidentComment,
     AccidentDetail,
     AccidentImage,
+    AccidentListQuery,
+    AccidentListResult,
     AccidentSeverity,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
@@ -153,12 +155,59 @@ function ensureUpdatePayload(input: UpdateAccidentBody) {
     }
 }
 
-export async function listAccidents(): Promise<Accident[]> {
-    const accidents = await prisma.accident.findMany({
-        orderBy: { created_at: "desc" },
-    });
+export async function listAccidents(
+    query: AccidentListQuery = {},
+): Promise<AccidentListResult> {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(50, Math.max(1, query.limit ?? 10));
+    const search = query.search?.trim();
+    const severity = query.severity;
+    const sort = query.sort ?? "newest";
 
-    return accidents.map(toAccident);
+    const where = {
+        ...(search
+            ? {
+                  OR: [
+                      {
+                          title: {
+                              contains: search,
+                              mode: "insensitive" as const,
+                          },
+                      },
+                      {
+                          description: {
+                              contains: search,
+                              mode: "insensitive" as const,
+                          },
+                      },
+                  ],
+              }
+            : {}),
+        ...(severity ? { severity } : {}),
+    };
+
+    const [total, accidents] = await prisma.$transaction([
+        prisma.accident.count({ where }),
+        prisma.accident.findMany({
+            where,
+            orderBy:
+                sort === "oldest"
+                    ? { occurred_at: "asc" }
+                    : { created_at: "desc" },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+    ]);
+
+    return {
+        data: accidents.map(toAccident),
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+    };
 }
 
 export async function getAccident(accidentId: string): Promise<Accident> {

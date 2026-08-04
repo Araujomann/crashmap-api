@@ -29,6 +29,7 @@ import {
     updateAccident,
 } from "./accidents.service.js";
 import type {
+    AccidentListQuery,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
@@ -50,7 +51,9 @@ interface AccidentImageUploadRequest {
 }
 
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
-    app.get(
+    app.get<{
+        Querystring: AccidentListQuery;
+    }>(
         "/",
         {
             schema: {
@@ -59,10 +62,10 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
                 },
             },
         },
-        async (_, reply) => {
-            const accidents = await listAccidents();
+        async (request, reply) => {
+            const accidents = await listAccidents(request.query);
 
-            return reply.code(200).send({ data: accidents });
+            return reply.code(200).send(accidents);
         },
     );
 

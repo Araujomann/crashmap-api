@@ -48,6 +48,24 @@ export interface CreateAccidentBody {
     severity: AccidentSeverity;
 }
 
+export interface AccidentListQuery {
+    page?: number;
+    limit?: number;
+    search?: string;
+    severity?: AccidentSeverity;
+    sort?: "newest" | "oldest";
+}
+
+export interface AccidentListResult {
+    data: Accident[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 export interface UpdateAccidentBody {
     title?: string;
     description?: string | null;

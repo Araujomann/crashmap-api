@@ -132,11 +132,22 @@ export const updateAccidentBodySchema = {
 export const accidentsListResponseSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["data"],
+    required: ["data", "pagination"],
     properties: {
         data: {
             type: "array",
             items: accidentSchema,
+        },
+        pagination: {
+            type: "object",
+            additionalProperties: false,
+            required: ["page", "limit", "total", "totalPages"],
+            properties: {
+                page: { type: "number" },
+                limit: { type: "number" },
+                total: { type: "number" },
+                totalPages: { type: "number" },
+            },
         },
     },
 } as const;
