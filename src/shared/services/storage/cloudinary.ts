@@ -28,6 +28,10 @@ export async function uploadImageToCloudinary(
         );
     }
 
+    if (fileBuffer.length === 0) {
+        throw new AppError("Image file is empty", 400, "EMPTY_IMAGE_FILE");
+    }
+
     return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
             {

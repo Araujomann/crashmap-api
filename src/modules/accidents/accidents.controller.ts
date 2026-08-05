@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { requireAuthenticatedUser } from "../auth/auth.guard.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import {
@@ -40,14 +40,24 @@ interface AccidentImageUploadRequest {
     params: {
         id: string;
     };
-    body: {
-        caption?: string;
-    };
-    file?: {
-        filename: string;
-        mimetype: string;
-        buffer: Buffer;
-    };
+}
+
+async function readAccidentImageUpload(request: FastifyRequest) {
+    let fileBuffer: Buffer | undefined;
+    let caption: string | null = null;
+
+    for await (const part of request.parts()) {
+        if (part.type === "file") {
+            fileBuffer = await part.toBuffer();
+            continue;
+        }
+
+        if (part.type === "field" && part.fieldname === "caption") {
+            caption = typeof part.value === "string" ? part.value.trim() : null;
+        }
+    }
+
+    return { fileBuffer, caption };
 }
 
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
@@ -201,7 +211,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         async (request, reply) => {
             const typedRequest =
                 request as unknown as AccidentImageUploadRequest;
-            if (!typedRequest.file) {
+            const upload = await readAccidentImageUpload(request);
+
+            if (!upload.fileBuffer) {
                 return reply.code(400 as 201).send({
                     error: {
                         code: "IMAGE_FILE_REQUIRED",
@@ -215,8 +227,8 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
                 request.authUser as AuthUser,
                 typedRequest.params.id,
                 {
-                    fileBuffer: typedRequest.file.buffer,
-                    caption: typedRequest.body?.caption ?? null,
+                    fileBuffer: upload.fileBuffer,
+                    caption: upload.caption,
                 } as CreateAccidentImageBody,
             );
 
