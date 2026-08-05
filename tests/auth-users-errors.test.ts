@@ -45,7 +45,9 @@ test("register rejects duplicate emails", async () => {
         );
     } finally {
         if (userId) {
-            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.refreshToken.deleteMany({
+                where: { user_id: userId },
+            });
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 
@@ -93,7 +95,9 @@ test("login rejects invalid credentials", async () => {
         );
     } finally {
         if (userId) {
-            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.refreshToken.deleteMany({
+                where: { user_id: userId },
+            });
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 
@@ -112,10 +116,7 @@ test("protected routes reject missing access tokens", async () => {
         });
 
         assert.equal(response.statusCode, 401);
-        assert.equal(
-            response.json().error.code,
-            "AUTH_MISSING_ACCESS_TOKEN",
-        );
+        assert.equal(response.json().error.code, "AUTH_MISSING_ACCESS_TOKEN");
     } finally {
         await app.close();
     }
@@ -143,7 +144,8 @@ test("users me rejects invalid payloads", async () => {
         });
 
         assert.equal(registerResponse.statusCode, 201);
-        const accessToken = registerResponse.json().data.tokens.accessToken as string;
+        const accessToken = registerResponse.json().data.tokens
+            .accessToken as string;
         userId = registerResponse.json().data.user.id as string;
 
         const invalidUpdateResponse = await app.inject({
@@ -158,10 +160,15 @@ test("users me rejects invalid payloads", async () => {
         });
 
         assert.equal(invalidUpdateResponse.statusCode, 400);
-        assert.equal(invalidUpdateResponse.json().error.code, "VALIDATION_ERROR");
+        assert.equal(
+            invalidUpdateResponse.json().error.code,
+            "VALIDATION_ERROR",
+        );
     } finally {
         if (userId) {
-            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.refreshToken.deleteMany({
+                where: { user_id: userId },
+            });
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 

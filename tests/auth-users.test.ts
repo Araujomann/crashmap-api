@@ -83,7 +83,9 @@ test("auth flow supports register, login, refresh, and logout", async () => {
         );
     } finally {
         if (userId) {
-            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.refreshToken.deleteMany({
+                where: { user_id: userId },
+            });
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 
@@ -156,7 +158,9 @@ test("users me flow returns and updates the current profile", async () => {
         assert.equal(meAfterUpdateResponse.json().data.name, updatedName);
     } finally {
         if (userId) {
-            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.refreshToken.deleteMany({
+                where: { user_id: userId },
+            });
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 
