@@ -8,7 +8,9 @@ export const accidentSchema = {
     additionalProperties: false,
     required: [
         "id",
-        "title",
+        "tipo_acidente",
+        "classificacao_acidente",
+        "condicao_meteorologica",
         "description",
         "latitude",
         "longitude",
@@ -20,7 +22,15 @@ export const accidentSchema = {
     ],
     properties: {
         id: { type: "string" },
-        title: { type: "string" },
+        tipo_acidente: { type: "string" },
+        classificacao_acidente: {
+            type: "string",
+            enum: ["com_vitima", "sem_vitima"],
+        },
+        condicao_meteorologica: {
+            type: "string",
+            enum: ["ceu_claro", "chuva", "nublado", "garoa"],
+        },
         description: { type: ["string", "null"] },
         latitude: { type: "number" },
         longitude: { type: "number" },
@@ -96,9 +106,25 @@ export const accidentDetailSchema = {
 export const createAccidentBodySchema = {
     type: "object",
     additionalProperties: false,
-    required: ["title", "latitude", "longitude", "occurredAt", "severity"],
+    required: [
+        "tipo_acidente",
+        "classificacao_acidente",
+        "condicao_meteorologica",
+        "latitude",
+        "longitude",
+        "occurredAt",
+        "severity",
+    ],
     properties: {
-        title: { type: "string", minLength: 3, maxLength: 180 },
+        tipo_acidente: { type: "string", minLength: 3, maxLength: 180 },
+        classificacao_acidente: {
+            type: "string",
+            enum: ["com_vitima", "sem_vitima"],
+        },
+        condicao_meteorologica: {
+            type: "string",
+            enum: ["ceu_claro", "chuva", "nublado", "garoa"],
+        },
         description: { type: "string", maxLength: 4000 },
         latitude: { type: "number", minimum: -90, maximum: 90 },
         longitude: { type: "number", minimum: -180, maximum: 180 },
@@ -120,7 +146,15 @@ export const updateAccidentBodySchema = {
     type: "object",
     additionalProperties: false,
     properties: {
-        title: { type: "string", minLength: 3, maxLength: 180 },
+        tipo_acidente: { type: "string", minLength: 3, maxLength: 180 },
+        classificacao_acidente: {
+            type: "string",
+            enum: ["com_vitima", "sem_vitima"],
+        },
+        condicao_meteorologica: {
+            type: "string",
+            enum: ["ceu_claro", "chuva", "nublado", "garoa"],
+        },
         description: { type: ["string", "null"], maxLength: 4000 },
         latitude: { type: "number", minimum: -90, maximum: 90 },
         longitude: { type: "number", minimum: -180, maximum: 180 },

@@ -7,8 +7,8 @@ import { prisma } from "../src/shared/database/prisma.js";
 function hasCloudinaryConfig() {
     return Boolean(
         env.CLOUDINARY_CLOUD_NAME &&
-            env.CLOUDINARY_API_KEY &&
-            env.CLOUDINARY_API_SECRET,
+        env.CLOUDINARY_API_KEY &&
+        env.CLOUDINARY_API_SECRET,
     );
 }
 
@@ -23,7 +23,7 @@ function buildMultipartBody(boundary: string, caption: string, file: Buffer) {
         Buffer.from(
             `--${boundary}\r\n` +
                 'Content-Disposition: form-data; name="file"; filename="valid.png"\r\n' +
-                'Content-Type: image/png\r\n\r\n',
+                "Content-Type: image/png\r\n\r\n",
             "utf8",
         ),
         file,
@@ -43,7 +43,7 @@ test(
         const uniqueSuffix = `${Date.now()}`;
         const email = `upload-test-${uniqueSuffix}@example.com`;
         const password = "Test12345!";
-        const title = `Upload test accident ${uniqueSuffix}`;
+        const tipoAcidente = `Upload test accident ${uniqueSuffix}`;
         const boundary = `----crashmap-test-${uniqueSuffix}`;
         const pngBuffer = Buffer.from(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQABAAUA+gA3AAAAAElFTkSuQmCC",
@@ -77,7 +77,9 @@ test(
                     authorization: `Bearer ${accessToken}`,
                 },
                 payload: {
-                    title,
+                    tipo_acidente: tipoAcidente,
+                    classificacao_acidente: "com_vitima",
+                    condicao_meteorologica: "ceu_claro",
                     description: "Temporary accident for upload testing",
                     latitude: -23.55,
                     longitude: -46.63,
@@ -97,7 +99,11 @@ test(
                     authorization: `Bearer ${accessToken}`,
                     "content-type": `multipart/form-data; boundary=${boundary}`,
                 },
-                payload: buildMultipartBody(boundary, "cloudinary test", pngBuffer),
+                payload: buildMultipartBody(
+                    boundary,
+                    "cloudinary test",
+                    pngBuffer,
+                ),
             });
 
             assert.equal(uploadResponse.statusCode, 201);
@@ -109,7 +115,9 @@ test(
             assert.match(uploadBody.data.image_url, /^https:\/\//);
         } finally {
             if (imageId) {
-                await prisma.accidentImage.deleteMany({ where: { id: imageId } });
+                await prisma.accidentImage.deleteMany({
+                    where: { id: imageId },
+                });
             }
 
             if (accidentId) {
@@ -117,7 +125,9 @@ test(
             }
 
             if (userId) {
-                await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+                await prisma.refreshToken.deleteMany({
+                    where: { user_id: userId },
+                });
                 await prisma.user.deleteMany({ where: { id: userId } });
             }
 

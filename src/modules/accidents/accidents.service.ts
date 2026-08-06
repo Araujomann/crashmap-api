@@ -18,7 +18,9 @@ import type {
 
 function toAccident(accident: {
     id: string;
-    title: string;
+    tipo_acidente: string;
+    classificacao_acidente: "com_vitima" | "sem_vitima";
+    condicao_meteorologica: "ceu_claro" | "chuva" | "nublado" | "garoa";
     description: string | null;
     latitude: number;
     longitude: number;
@@ -30,7 +32,9 @@ function toAccident(accident: {
 }): Accident {
     return {
         id: accident.id,
-        title: accident.title,
+        tipo_acidente: accident.tipo_acidente,
+        classificacao_acidente: accident.classificacao_acidente,
+        condicao_meteorologica: accident.condicao_meteorologica,
         description: accident.description,
         latitude: accident.latitude,
         longitude: accident.longitude,
@@ -82,7 +86,9 @@ function toAccidentImage(image: {
 
 function toAccidentDetail(accident: {
     id: string;
-    title: string;
+    tipo_acidente: string;
+    classificacao_acidente: "com_vitima" | "sem_vitima";
+    condicao_meteorologica: "ceu_claro" | "chuva" | "nublado" | "garoa";
     description: string | null;
     latitude: number;
     longitude: number;
@@ -140,7 +146,9 @@ function canManageAccident(user: AuthUser, accidentOwnerId: string | null) {
 
 function ensureUpdatePayload(input: UpdateAccidentBody) {
     if (
-        input.title === undefined &&
+        input.tipo_acidente === undefined &&
+        input.classificacao_acidente === undefined &&
+        input.condicao_meteorologica === undefined &&
         input.description === undefined &&
         input.latitude === undefined &&
         input.longitude === undefined &&
@@ -176,7 +184,7 @@ export async function listAccidents(
             ? {
                   OR: [
                       {
-                          title: {
+                          tipo_acidente: {
                               contains: search,
                               mode: "insensitive" as const,
                           },
@@ -267,7 +275,9 @@ export async function createAccident(
 ): Promise<Accident> {
     const accident = await prisma.accident.create({
         data: {
-            title: input.title.trim(),
+            tipo_acidente: input.tipo_acidente.trim(),
+            classificacao_acidente: input.classificacao_acidente,
+            condicao_meteorologica: input.condicao_meteorologica,
             description: input.description?.trim() || null,
             latitude: input.latitude,
             longitude: input.longitude,
@@ -306,7 +316,9 @@ export async function updateAccident(
     const accident = await prisma.accident.update({
         where: { id: accidentId },
         data: {
-            title: input.title?.trim(),
+            tipo_acidente: input.tipo_acidente?.trim(),
+            classificacao_acidente: input.classificacao_acidente,
+            condicao_meteorologica: input.condicao_meteorologica,
             description:
                 input.description === undefined
                     ? undefined

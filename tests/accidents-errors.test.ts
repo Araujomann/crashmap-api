@@ -12,7 +12,9 @@ test("accidents routes reject missing auth and invalid create payloads", async (
             method: "POST",
             url: "/accidents",
             payload: {
-                title: "Unauthorized accident",
+                tipo_acidente: "Unauthorized accident",
+                classificacao_acidente: "sem_vitima",
+                condicao_meteorologica: "ceu_claro",
                 description: "Should not be created",
                 latitude: -23.55,
                 longitude: -46.63,
@@ -52,7 +54,9 @@ test("accidents routes reject missing auth and invalid create payloads", async (
                 authorization: `Bearer ${accessToken}`,
             },
             payload: {
-                title: "Bad accident",
+                tipo_acidente: "Bad accident",
+                classificacao_acidente: "sem_vitima",
+                condicao_meteorologica: "chuva",
                 description: "Invalid date should fail validation",
                 latitude: -23.55,
                 longitude: -46.63,
@@ -122,7 +126,9 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
                 authorization: `Bearer ${ownerAccessToken}`,
             },
             payload: {
-                title: `Owned accident ${uniqueSuffix}`,
+                tipo_acidente: `Owned accident ${uniqueSuffix}`,
+                classificacao_acidente: "com_vitima",
+                condicao_meteorologica: "nublado",
                 description: "Created by owner",
                 latitude: -23.55,
                 longitude: -46.63,
@@ -141,7 +147,7 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
                 authorization: `Bearer ${intruderAccessToken}`,
             },
             payload: {
-                title: "Unauthorized update",
+                tipo_acidente: "Unauthorized update",
             },
         });
 

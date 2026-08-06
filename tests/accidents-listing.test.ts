@@ -9,7 +9,7 @@ test("listAccidents supports pagination, search, and severity filters", async ()
     await prisma.accident.deleteMany({
         where: {
             OR: [
-                { title: { contains: marker } },
+                { tipo_acidente: { contains: marker } },
                 { description: { contains: marker } },
             ],
         },
@@ -18,7 +18,9 @@ test("listAccidents supports pagination, search, and severity filters", async ()
     await prisma.accident.createMany({
         data: [
             {
-                title: `${marker} one`,
+                tipo_acidente: `${marker} one`,
+                classificacao_acidente: "com_vitima",
+                condicao_meteorologica: "ceu_claro",
                 description: `${marker} description`,
                 latitude: -23.5,
                 longitude: -46.6,
@@ -26,7 +28,9 @@ test("listAccidents supports pagination, search, and severity filters", async ()
                 severity: "medium",
             },
             {
-                title: `${marker} two`,
+                tipo_acidente: `${marker} two`,
+                classificacao_acidente: "sem_vitima",
+                condicao_meteorologica: "chuva",
                 description: `${marker} description`,
                 latitude: -22.9,
                 longitude: -47.1,
@@ -56,13 +60,13 @@ test("listAccidents supports pagination, search, and severity filters", async ()
         assert.equal(result.pagination.limit, 1);
         assert.equal(result.pagination.total, 1);
         assert.equal(result.pagination.totalPages, 1);
-        assert.ok(result.data[0].title.includes(marker));
+        assert.ok(result.data[0].tipo_acidente.includes(marker));
         assert.equal(result.data[0].severity, "medium");
     } finally {
         await prisma.accident.deleteMany({
             where: {
                 OR: [
-                    { title: { contains: marker } },
+                    { tipo_acidente: { contains: marker } },
                     { description: { contains: marker } },
                 ],
             },

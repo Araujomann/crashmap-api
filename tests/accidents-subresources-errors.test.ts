@@ -144,7 +144,9 @@ test("accident comments and images reject other-user deletes", async () => {
                 authorization: `Bearer ${ownerAccessToken}`,
             },
             payload: {
-                title: `Subresource accident ${uniqueSuffix}`,
+                tipo_acidente: `Subresource accident ${uniqueSuffix}`,
+                classificacao_acidente: "sem_vitima",
+                condicao_meteorologica: "nublado",
                 description: "Created for comment/image tests",
                 latitude: -23.55,
                 longitude: -46.63,
