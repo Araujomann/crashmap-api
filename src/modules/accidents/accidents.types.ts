@@ -1,10 +1,14 @@
 import type { AuthUser } from "../auth/auth.types.js";
 
 export type AccidentSeverity = "low" | "medium" | "high" | "critical";
+export type AccidentClassification = "com_vitima" | "sem_vitima";
+export type AccidentWeatherCondition = "ceu_claro" | "chuva" | "nublado" | "garoa";
 
 export interface Accident {
     id: string;
-    title: string;
+    tipo_acidente: string;
+    classificacao_acidente: AccidentClassification;
+    condicao_meteorologica: AccidentWeatherCondition;
     description: string | null;
     latitude: number;
     longitude: number;
@@ -40,7 +44,9 @@ export interface AccidentDetail extends Accident {
 }
 
 export interface CreateAccidentBody {
-    title: string;
+    tipo_acidente: string;
+    classificacao_acidente: AccidentClassification;
+    condicao_meteorologica: AccidentWeatherCondition;
     description?: string;
     latitude: number;
     longitude: number;
@@ -73,8 +79,10 @@ export interface AccidentListResult {
 }
 
 export interface UpdateAccidentBody {
-    title?: string;
+    tipo_acidente?: string;
     description?: string | null;
+    classificacao_acidente?: AccidentClassification;
+    condicao_meteorologica?: AccidentWeatherCondition;
     latitude?: number;
     longitude?: number;
     occurredAt?: string;

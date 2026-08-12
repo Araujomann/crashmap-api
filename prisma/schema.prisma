@@ -20,6 +20,17 @@ enum accident_severity {
   high
   critical
 }
+enum accident_classificacao {
+  com_vitima
+  sem_vitima
+}
+
+enum accident_condicao_meteorologica {
+  ceu_claro
+  chuva
+  nublado
+  garoa
+}
 
 model User {
   id  String @id @default(uuid())
@@ -39,7 +50,10 @@ model User {
 
 model Accident {
   id String @id @default(uuid())
-  title String
+   tipo_acidente   String @map("title")
+  classificacao_acidente accident_classificacao @default(sem_vitima)
+  condicao_meteorologica accident_condicao_meteorologica @default(ceu_claro)
+
   description String?
   latitude Float
   longitude Float
