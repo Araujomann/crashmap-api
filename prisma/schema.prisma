@@ -32,6 +32,11 @@ enum accident_condicao_meteorologica {
   garoa
 }
 
+enum accident_source {
+  APP
+  PRF
+}
+
 model User {
   id  String @id @default(uuid())
   name String
@@ -60,6 +65,7 @@ model Accident {
   occurred_at DateTime
   severity accident_severity
   created_by_id String?
+  source accident_source @default(APP)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

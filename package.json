@@ -24,6 +24,7 @@
     },
     "devDependencies": {
         "@types/node": "^26.0.1",
+        "csv-parser": "^3.2.1",
         "tsx": "^4.22.4",
         "typescript": "5.8.3"
     }
