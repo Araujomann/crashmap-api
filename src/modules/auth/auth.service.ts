@@ -17,6 +17,7 @@ import type {
     LogoutBody,
     RefreshBody,
     RegisterBody,
+    RegisterResponse,
     UserRole,
 } from "./auth.types.js";
 
@@ -42,6 +43,7 @@ export function toAuthUser(user: {
     name: string;
     email: string;
     role: UserRole;
+    is_email_verified: boolean;
     created_at: Date;
     updated_at: Date;
 }): AuthUser {
@@ -50,6 +52,7 @@ export function toAuthUser(user: {
         name: user.name,
         email: user.email,
         role: user.role,
+        is_email_verified: user.is_email_verified,
         created_at: user.created_at,
         updated_at: user.updated_at,
     };
@@ -256,7 +259,7 @@ function ensurePasswordUser(passwordHash: string | null): string {
     return passwordHash;
 }
 
-export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
+export async function registerUser(input: RegisterBody): Promise<RegisterResponse> {
     const normalizedEmail = input.email.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
         where: { email: normalizedEmail },
@@ -278,12 +281,21 @@ export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
         },
     });
 
-    const tokens = buildTokens(user);
-    await storeRefreshToken(user.id, tokens.refreshToken);
+    const verificationToken = randomBytes(32).toString("hex");
+    await prisma.verificationToken.create({
+        data: {
+            user_id: user.id,
+            token: verificationToken,
+            expires_at: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
+        }
+    });
+
+    // TODO: Configurar serviço real de envio de e-mail (Resend, SES) direcionando ao Frontend
+    console.log(`\n[MOCK EMAIL] Enviar e-mail para: ${user.email}\nLink Frontend: http://localhost:5173/verificar-email?token=${verificationToken}\n`);
 
     return {
-        user: toAuthUser(user),
-        tokens,
+        message: "User registered successfully. Please check your email to verify your account.",
+        userId: user.id
     };
 }
 
@@ -298,6 +310,14 @@ export async function loginUser(input: LoginBody): Promise<AuthResponse> {
             "Invalid credentials",
             401,
             "AUTH_INVALID_CREDENTIALS",
+        );
+    }
+
+    if (!user.is_email_verified) {
+        throw new AuthError(
+            "Email not verified. Please check your inbox.",
+            403,
+            "AUTH_EMAIL_NOT_VERIFIED",
         );
     }
 
@@ -366,6 +386,29 @@ export async function refreshSession(
         user: toAuthUser(tokenRecord.user),
         tokens,
     };
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+    const record = await prisma.verificationToken.findUnique({
+        where: { token }
+    });
+
+    if (!record || record.expires_at < new Date()) {
+        throw new AuthError(
+            "Invalid or expired verification token",
+            400,
+            "AUTH_INVALID_VERIFICATION_TOKEN"
+        );
+    }
+
+    await prisma.user.update({
+        where: { id: record.user_id },
+        data: { is_email_verified: true }
+    });
+
+    await prisma.verificationToken.delete({
+        where: { id: record.id }
+    });
 }
 
 export async function logoutUser(input: LogoutBody): Promise<void> {

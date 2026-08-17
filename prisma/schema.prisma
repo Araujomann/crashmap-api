@@ -43,6 +43,7 @@ model User {
   email String @unique
   password_hash String?
   google_id String? 
+  is_email_verified Boolean @default(false)
   role role @default(user)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -51,6 +52,20 @@ model User {
   accident_comments AccidentComment[]
   accident_images AccidentImage[]
   refresh_tokens RefreshToken[]
+  verification_tokens VerificationToken[]
+}
+
+model VerificationToken {
+  id String @id @default(uuid())
+  token String @unique
+  user_id String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([token])
 }
 
 model Accident {

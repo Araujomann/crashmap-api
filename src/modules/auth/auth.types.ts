@@ -14,6 +14,7 @@ export interface AuthUser {
     name: string;
     email: string;
     role: UserRole;
+    is_email_verified: boolean;
     created_at: Date;
     updated_at: Date;
 }
@@ -35,6 +36,15 @@ export interface RefreshBody {
 
 export interface LogoutBody {
     refreshToken: string;
+}
+
+export interface VerifyEmailBody {
+    token: string;
+}
+
+export interface RegisterResponse {
+    message: string;
+    userId: string;
 }
 
 export interface AuthTokens {

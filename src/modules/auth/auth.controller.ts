@@ -6,12 +6,16 @@ import {
     meResponseSchema,
     refreshBodySchema,
     registerBodySchema,
+    registerResponseSchema,
+    simpleMessageResponseSchema,
+    verifyEmailBodySchema,
 } from "./auth.schema.js";
 import {
     loginUser,
     logoutUser,
     refreshSession,
     registerUser,
+    verifyEmail,
 } from "./auth.service.js";
 import { requireAuthenticatedUser } from "./auth.guard.js";
 import type {
@@ -19,6 +23,7 @@ import type {
     LogoutBody,
     RefreshBody,
     RegisterBody,
+    VerifyEmailBody,
 } from "./auth.types.js";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
@@ -28,7 +33,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             schema: {
                 body: registerBodySchema,
                 response: {
-                    201: authResponseSchema,
+                    201: registerResponseSchema,
                 },
             },
         },
@@ -36,6 +41,23 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             const result = await registerUser(request.body);
 
             return reply.code(201).send({ data: result });
+        },
+    );
+
+    app.post<{ Body: VerifyEmailBody }>(
+        "/verify-email",
+        {
+            schema: {
+                body: verifyEmailBodySchema,
+                response: {
+                    200: simpleMessageResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            await verifyEmail(request.body.token);
+
+            return reply.code(200).send({ data: { message: "Email successfully verified!" } });
         },
     );
 

@@ -9,6 +9,48 @@ export const registerBodySchema = {
     },
 } as const;
 
+export const verifyEmailBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["token"],
+    properties: {
+        token: { type: "string", minLength: 10 },
+    },
+} as const;
+
+export const registerResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["message", "userId"],
+            properties: {
+                message: { type: "string" },
+                userId: { type: "string" },
+            },
+        },
+    },
+} as const;
+
+export const simpleMessageResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["message"],
+            properties: {
+                message: { type: "string" },
+            },
+        },
+    },
+} as const;
+
 export const loginBodySchema = {
     type: "object",
     additionalProperties: false,
@@ -31,12 +73,13 @@ export const refreshBodySchema = {
 export const authUserSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["id", "name", "email", "role", "created_at", "updated_at"],
+    required: ["id", "name", "email", "role", "is_email_verified", "created_at", "updated_at"],
     properties: {
         id: { type: "string" },
         name: { type: "string" },
         email: { type: "string" },
         role: { type: "string", enum: ["user", "moderator", "admin"] },
+        is_email_verified: { type: "boolean" },
         created_at: { type: "string", format: "date-time" },
         updated_at: { type: "string", format: "date-time" },
     },

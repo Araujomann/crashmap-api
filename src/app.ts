@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import  cors from "@fastify/cors";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 import { prisma } from "./shared/database/prisma.js";
 import { AppError } from "./shared/errors/app-error.js";
 import { buildDataResponseSchema } from "./shared/http/api-response.js";
@@ -23,6 +25,40 @@ const healthDataSchema = {
 export async function buildApp() {
     const app = Fastify({ logger: true });
 
+    await app.register(fastifySwagger, {
+        openapi: {
+            openapi: "3.0.0",
+            info: {
+                title: "CrashMap API",
+                description: "Documentação da API do CrashMap",
+                version: "1.0.0",
+            },
+            tags: [
+                { name: "Auth", description: "Endpoints de Autenticação" },
+                { name: "Users", description: "Endpoints de Usuários" },
+                { name: "Accidents", description: "Endpoints de Acidentes" },
+            ],
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: "http",
+                        scheme: "bearer",
+                        bearerFormat: "JWT",
+                    },
+                },
+            },
+        },
+    });
+
+    await app.register(fastifySwaggerUi, {
+        routePrefix: "/docs",
+        uiConfig: {
+            docExpansion: "list",
+            deepLinking: false,
+        },
+        staticCSP: true,
+        transformStaticCSP: (header) => header,
+    });
     await app.register(cors, {
         origin: true, 
     });
