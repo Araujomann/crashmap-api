@@ -1,11 +1,13 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
+import  cors from "@fastify/cors";
 import { prisma } from "./shared/database/prisma.js";
 import { AppError } from "./shared/errors/app-error.js";
 import { buildDataResponseSchema } from "./shared/http/api-response.js";
 import { accidentsRoutes } from "./modules/accidents/accidents.controller.js";
 import { authRoutes } from "./modules/auth/auth.controller.js";
 import { usersRoutes } from "./modules/users/users.controller.js";
+
 
 const healthDataSchema = {
     type: "object",
@@ -20,6 +22,10 @@ const healthDataSchema = {
 
 export async function buildApp() {
     const app = Fastify({ logger: true });
+
+    await app.register(cors, {
+        origin: true, 
+    });
 
     await app.register(multipart, {
         limits: {
