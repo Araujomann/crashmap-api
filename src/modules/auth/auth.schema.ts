@@ -18,22 +18,6 @@ export const verifyEmailBodySchema = {
     },
 } as const;
 
-export const registerResponseSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["data"],
-    properties: {
-        data: {
-            type: "object",
-            additionalProperties: false,
-            required: ["message", "userId"],
-            properties: {
-                message: { type: "string" },
-                userId: { type: "string" },
-            },
-        },
-    },
-} as const;
 
 export const simpleMessageResponseSchema = {
     type: "object",

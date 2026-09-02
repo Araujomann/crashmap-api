@@ -42,10 +42,7 @@ export interface VerifyEmailBody {
     token: string;
 }
 
-export interface RegisterResponse {
-    message: string;
-    userId: string;
-}
+export type RegisterResponse = AuthResponse;
 
 export interface AuthTokens {
     accessToken: string;

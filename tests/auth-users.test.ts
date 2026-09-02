@@ -31,6 +31,7 @@ test("auth flow supports register, login, refresh, and logout", async () => {
         assert.equal(registerBody.data.user.email, email);
         userId = registerBody.data.user.id as string;
 
+        await prisma.user.update({ where: { id: userId }, data: { is_email_verified: true } });
         const loginResponse = await app.inject({
             method: "POST",
             url: "/auth/login",

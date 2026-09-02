@@ -17,7 +17,6 @@ import type {
     LogoutBody,
     RefreshBody,
     RegisterBody,
-    RegisterResponse,
     UserRole,
 } from "./auth.types.js";
 
@@ -259,7 +258,7 @@ function ensurePasswordUser(passwordHash: string | null): string {
     return passwordHash;
 }
 
-export async function registerUser(input: RegisterBody): Promise<RegisterResponse> {
+export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
     const normalizedEmail = input.email.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
         where: { email: normalizedEmail },
@@ -293,9 +292,12 @@ export async function registerUser(input: RegisterBody): Promise<RegisterRespons
     // TODO: Configurar serviço real de envio de e-mail (Resend, SES) direcionando ao Frontend
     console.log(`\n[MOCK EMAIL] Enviar e-mail para: ${user.email}\nLink Frontend: http://localhost:5173/verificar-email?token=${verificationToken}\n`);
 
+    const tokens = buildTokens(user);
+    await storeRefreshToken(user.id, tokens.refreshToken);
+
     return {
-        message: "User registered successfully. Please check your email to verify your account.",
-        userId: user.id
+        user: toAuthUser(user),
+        tokens,
     };
 }
 
@@ -310,14 +312,6 @@ export async function loginUser(input: LoginBody): Promise<AuthResponse> {
             "Invalid credentials",
             401,
             "AUTH_INVALID_CREDENTIALS",
-        );
-    }
-
-    if (!user.is_email_verified) {
-        throw new AuthError(
-            "Email not verified. Please check your inbox.",
-            403,
-            "AUTH_EMAIL_NOT_VERIFIED",
         );
     }
 

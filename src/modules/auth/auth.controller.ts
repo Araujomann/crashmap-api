@@ -6,7 +6,7 @@ import {
     meResponseSchema,
     refreshBodySchema,
     registerBodySchema,
-    registerResponseSchema,
+    
     simpleMessageResponseSchema,
     verifyEmailBodySchema,
 } from "./auth.schema.js";
@@ -33,7 +33,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             schema: {
                 body: registerBodySchema,
                 response: {
-                    201: registerResponseSchema,
+                    201: authResponseSchema,
                 },
             },
         },

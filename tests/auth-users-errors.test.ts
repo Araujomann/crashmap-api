@@ -79,6 +79,7 @@ test("login rejects invalid credentials", async () => {
         assert.equal(registerResponse.statusCode, 201);
         userId = registerResponse.json().data.user.id as string;
 
+        await prisma.user.update({ where: { id: userId }, data: { is_email_verified: true } });
         const invalidLoginResponse = await app.inject({
             method: "POST",
             url: "/auth/login",

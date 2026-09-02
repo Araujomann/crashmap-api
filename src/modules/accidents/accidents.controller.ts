@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
-import { requireAuthenticatedUser } from "../auth/auth.guard.js";
+import { requireAuthenticatedUser, requireVerifiedEmail } from "../auth/auth.guard.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import {
     accidentIdParamsSchema,
@@ -116,7 +116,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Params: { id: string }; Body: CreateAccidentCommentBody }>(
         "/:id/comments",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 params: accidentIdParamsSchema,
                 body: createAccidentCommentBodySchema,
@@ -146,7 +146,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.delete<{ Params: { id: string; commentId: string } }>(
         "/:id/comments/:commentId",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 params: {
                     type: "object",
@@ -193,7 +193,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.post(
         "/:id/images",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 params: accidentIdParamsSchema,
                 response: {
@@ -239,7 +239,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.delete<{ Params: { id: string; imageId: string } }>(
         "/:id/images/:imageId",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 params: {
                     type: "object",
@@ -269,7 +269,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: CreateAccidentBody }>(
         "/",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 body: createAccidentBodySchema,
                 response: {
@@ -290,7 +290,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.patch<{ Params: { id: string }; Body: UpdateAccidentBody }>(
         "/:id",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 params: accidentIdParamsSchema,
                 body: updateAccidentBodySchema,
@@ -313,7 +313,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.delete<{ Params: { id: string } }>(
         "/:id",
         {
-            preHandler: requireAuthenticatedUser,
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 params: accidentIdParamsSchema,
                 response: {
