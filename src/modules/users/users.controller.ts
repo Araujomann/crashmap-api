@@ -10,6 +10,9 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: requireAuthenticatedUser,
             schema: {
+                tags: ['Users'],
+                summary: 'Obter perfil completo do usuário',
+                security: [{ bearerAuth: [] }],
                 response: {
                     200: meResponseSchema,
                 },
@@ -27,6 +30,9 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: requireAuthenticatedUser,
             schema: {
+                tags: ['Users'],
+                summary: 'Atualizar os dados do usuário corrente',
+                security: [{ bearerAuth: [] }],
                 body: updateMeBodySchema,
                 response: {
                     200: meResponseSchema,

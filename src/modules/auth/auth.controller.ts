@@ -31,6 +31,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         "/register",
         {
             schema: {
+                tags: ['Auth'],
+                summary: 'Registra um novo usuário',
                 body: registerBodySchema,
                 response: {
                     201: authResponseSchema,
@@ -48,6 +50,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         "/verify-email",
         {
             schema: {
+                tags: ['Auth'],
+                summary: 'Verifica e-mail do usuário via token',
                 body: verifyEmailBodySchema,
                 response: {
                     200: simpleMessageResponseSchema,
@@ -65,6 +69,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         "/login",
         {
             schema: {
+                tags: ['Auth'],
+                summary: 'Realiza login na aplicação',
                 body: loginBodySchema,
                 response: {
                     200: authResponseSchema,
@@ -82,6 +88,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         "/refresh",
         {
             schema: {
+                tags: ['Auth'],
+                summary: 'Renova o token de acesso (Refresh Token)',
                 body: refreshBodySchema,
                 response: {
                     200: authResponseSchema,
@@ -99,6 +107,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         "/logout",
         {
             schema: {
+                tags: ['Auth'],
+                summary: 'Revoga o Refresh Token atual',
                 body: refreshBodySchema,
                 response: {
                     200: logoutResponseSchema,
@@ -117,6 +127,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: requireAuthenticatedUser,
             schema: {
+                tags: ['Auth'],
+                summary: 'Obter perfil atual usando autenticação',
+                security: [{ bearerAuth: [] }],
                 response: {
                     200: meResponseSchema,
                 },

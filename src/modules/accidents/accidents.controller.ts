@@ -67,6 +67,8 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         "/",
         {
             schema: {
+                tags: ['Accidents'],
+                summary: 'Listar acidentes com paginação e filtros',
                 response: {
                     200: accidentsListResponseSchema,
                 },
@@ -83,6 +85,8 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         "/:id",
         {
             schema: {
+                tags: ['Accidents'],
+                summary: 'Obter um acidente pelo ID',
                 params: accidentIdParamsSchema,
                 response: {
                     200: accidentResponseSchema,
@@ -100,6 +104,8 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         "/:id/comments",
         {
             schema: {
+                tags: ['Accidents'],
+                summary: 'Listar comentários de um acidente',
                 params: accidentIdParamsSchema,
                 response: {
                     200: accidentCommentsListResponseSchema,
@@ -118,6 +124,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Adicionar comentário em um acidente',
+                security: [{ bearerAuth: [] }],
                 params: accidentIdParamsSchema,
                 body: createAccidentCommentBodySchema,
                 response: {
@@ -148,6 +157,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Remover comentário de um acidente',
+                security: [{ bearerAuth: [] }],
                 params: {
                     type: "object",
                     additionalProperties: false,
@@ -195,6 +207,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Adicionar imagem a um acidente',
+                security: [{ bearerAuth: [] }],
                 params: accidentIdParamsSchema,
                 response: {
                     201: {
@@ -241,6 +256,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Remover imagem de um acidente',
+                security: [{ bearerAuth: [] }],
                 params: {
                     type: "object",
                     additionalProperties: false,
@@ -271,6 +289,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Criar/Reportar um novo acidente',
+                security: [{ bearerAuth: [] }],
                 body: createAccidentBodySchema,
                 response: {
                     201: accidentCreateResponseSchema,
@@ -292,6 +313,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Atualizar informações de um acidente',
+                security: [{ bearerAuth: [] }],
                 params: accidentIdParamsSchema,
                 body: updateAccidentBodySchema,
                 response: {
@@ -315,6 +339,9 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         {
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
+                tags: ['Accidents'],
+                summary: 'Deletar um acidente do sistema',
+                security: [{ bearerAuth: [] }],
                 params: accidentIdParamsSchema,
                 response: {
                     200: deletedAccidentResponseSchema,
