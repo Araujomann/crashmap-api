@@ -1,6 +1,7 @@
 import type { preHandlerHookHandler } from "fastify";
 import { prisma } from "../../shared/database/prisma.js";
 import { AuthError, toAuthUser, verifyAccessToken } from "./auth.service.js";
+import type { UserRole } from "./auth.types.js";
 
 function readBearerToken(authorizationHeader: string | undefined): string {
     if (!authorizationHeader) {
@@ -45,9 +46,7 @@ export const requireAuthenticatedUser: preHandlerHookHandler = async (
     request.authUser = toAuthUser(user);
 };
 
-export const requireVerifiedEmail: preHandlerHookHandler = async (
-    request,
-) => {
+export const requireVerifiedEmail: preHandlerHookHandler = async (request) => {
     if (!request.authUser) {
         throw new AuthError(
             "Authenticated user not found",
@@ -64,3 +63,27 @@ export const requireVerifiedEmail: preHandlerHookHandler = async (
         );
     }
 };
+
+export function requireRole(
+    ...allowedRoles: UserRole[]
+): preHandlerHookHandler {
+    return async (request) => {
+        if (!request.authUser) {
+            throw new AuthError(
+                "Authenticated user not found",
+                401,
+                "AUTH_USER_NOT_FOUND",
+            );
+        }
+
+        if (!allowedRoles.includes(request.authUser.role)) {
+            throw new AuthError(
+                "You do not have permission to access this resource",
+                403,
+                "AUTH_INSUFFICIENT_ROLE",
+            );
+        }
+    };
+}
+
+export const requireModerator = requireRole("moderator", "admin");

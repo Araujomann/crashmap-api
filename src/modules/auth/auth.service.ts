@@ -1,5 +1,4 @@
 import {
-    createHash,
     createHmac,
     randomBytes,
     scryptSync,
@@ -33,6 +32,12 @@ type TokenPayload = {
     role: UserRole;
     type: "access";
 };
+
+const userRoles = ["user", "moderator", "admin"] as const;
+
+export function isUserRole(value: string): value is UserRole {
+    return userRoles.includes(value as UserRole);
+}
 
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_KEY_BYTES = 64;
@@ -193,6 +198,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
         typeof payload.sub !== "string" ||
         typeof payload.email !== "string" ||
         typeof payload.role !== "string" ||
+        !isUserRole(payload.role) ||
         payload.type !== "access" ||
         !Number.isInteger(payload.exp) ||
         payload.exp <= Math.floor(Date.now() / 1000)
@@ -286,11 +292,13 @@ export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
             user_id: user.id,
             token: verificationToken,
             expires_at: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
-        }
+        },
     });
 
     // TODO: Configurar serviço real de envio de e-mail (Resend, SES) direcionando ao Frontend
-    console.log(`\n[MOCK EMAIL] Enviar e-mail para: ${user.email}\nLink Frontend: http://localhost:5173/verificar-email?token=${verificationToken}\n`);
+    console.log(
+        `\n[MOCK EMAIL] Enviar e-mail para: ${user.email}\nLink Frontend: http://localhost:5173/verificar-email?token=${verificationToken}\n`,
+    );
 
     const tokens = buildTokens(user);
     await storeRefreshToken(user.id, tokens.refreshToken);
@@ -384,24 +392,24 @@ export async function refreshSession(
 
 export async function verifyEmail(token: string): Promise<void> {
     const record = await prisma.verificationToken.findUnique({
-        where: { token }
+        where: { token },
     });
 
     if (!record || record.expires_at < new Date()) {
         throw new AuthError(
             "Invalid or expired verification token",
             400,
-            "AUTH_INVALID_VERIFICATION_TOKEN"
+            "AUTH_INVALID_VERIFICATION_TOKEN",
         );
     }
 
     await prisma.user.update({
         where: { id: record.user_id },
-        data: { is_email_verified: true }
+        data: { is_email_verified: true },
     });
 
     await prisma.verificationToken.delete({
-        where: { id: record.id }
+        where: { id: record.id },
     });
 }
 
