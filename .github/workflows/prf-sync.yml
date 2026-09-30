@@ -1,0 +1,51 @@
+name: Sync PRF accidents
+
+on:
+  schedule:
+    - cron: "17 3 1 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: prf-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
+      REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
+      PRF_SOURCE_URL: ${{ secrets.PRF_SOURCE_URL }}
+      PRF_SOURCE_YEAR: ${{ vars.PRF_SOURCE_YEAR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.7.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm prisma:generate
+
+      - name: Build
+        run: pnpm build
+
+      - name: Synchronize PRF
+        run: pnpm sync:prf
