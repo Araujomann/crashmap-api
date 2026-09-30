@@ -81,6 +81,9 @@ model Accident {
   severity accident_severity
   created_by_id String?
   source accident_source @default(APP)
+  source_record_id String?
+  source_year Int?
+  source_record_key String? @unique
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
