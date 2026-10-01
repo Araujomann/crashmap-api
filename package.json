@@ -8,7 +8,9 @@
         "dev": "tsx watch src/server.ts",
         "build": "tsc",
         "start": "node dist/src/server.js",
-        "prisma:generate": "prisma generate"
+        "prisma:generate": "prisma generate",
+        "import:prf": "tsx src/shared/scripts/import-prf.ts",
+        "sync:prf": "tsx src/shared/scripts/sync-prf.ts"
     },
     "keywords": [],
     "author": "",
@@ -24,10 +26,12 @@
         "dotenv": "^16.6.1",
         "fastify": "^5.8.5",
         "prisma": "6.19.0",
-        "resend": "^6.20.0"
+        "resend": "^6.20.0",
+        "unzipper": "^0.12.5"
     },
     "devDependencies": {
         "@types/node": "^26.0.1",
+        "@types/unzipper": "^0.10.11",
         "csv-parser": "^3.2.1",
         "tsx": "^4.22.4",
         "typescript": "5.8.3"

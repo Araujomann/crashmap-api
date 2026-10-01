@@ -39,8 +39,13 @@ function parseNumber(value: string | undefined): number | null {
     return Number.isFinite(parsed) ? parsed : null;
 }
 
-function parseDateAndHour(dateValue: string | undefined, timeValue: string | undefined): Date | null {
-    const dateMatch = (dateValue ?? "").trim().match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
+function parseDateAndHour(
+    dateValue: string | undefined,
+    timeValue: string | undefined,
+): Date | null {
+    const dateMatch = (dateValue ?? "")
+        .trim()
+        .match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
     if (!dateMatch) return null;
 
     const [, day, month, year] = dateMatch;
@@ -48,7 +53,16 @@ function parseDateAndHour(dateValue: string | undefined, timeValue: string | und
     if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) return null;
 
     const [hours, minutes, seconds = "00"] = time.split(":").map(Number);
-    const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), hours, minutes, Number(seconds)));
+    const date = new Date(
+        Date.UTC(
+            Number(year),
+            Number(month) - 1,
+            Number(day),
+            hours,
+            minutes,
+            Number(seconds),
+        ),
+    );
 
     if (
         date.getUTCFullYear() !== Number(year) ||
@@ -64,50 +78,79 @@ function parseDateAndHour(dateValue: string | undefined, timeValue: string | und
     return date;
 }
 
-function mapSeverity(mortos: number, graves: number, leves: number): "low" | "medium" | "high" | "critical" {
+function mapSeverity(
+    mortos: number,
+    graves: number,
+    leves: number,
+): "low" | "medium" | "high" | "critical" {
     if (mortos > 0) return "critical";
     if (graves > 0) return "high";
     if (leves > 0) return "medium";
     return "low";
 }
 
-function mapCondicaoTempo(value: string | undefined): "ceu_claro" | "chuva" | "nublado" | "garoa" {
+function mapCondicaoTempo(
+    value: string | undefined,
+): "ceu_claro" | "chuva" | "nublado" | "garoa" {
     const normalized = (value ?? "").toLowerCase();
     if (normalized.includes("chuva")) return "chuva";
     if (normalized.includes("nublado")) return "nublado";
-    if (normalized.includes("garoa") || normalized.includes("chuvisco")) return "garoa";
+    if (normalized.includes("garoa") || normalized.includes("chuvisco"))
+        return "garoa";
     return "ceu_claro";
 }
 
-function mapClassificacao(mortos: number, graves: number, leves: number): "com_vitima" | "sem_vitima" {
+function mapClassificacao(
+    mortos: number,
+    graves: number,
+    leves: number,
+): "com_vitima" | "sem_vitima" {
     return mortos > 0 || graves > 0 || leves > 0 ? "com_vitima" : "sem_vitima";
 }
 
 function inferSourceYear(csvPath: string): number {
     const year = basename(csvPath).match(/20\d{2}/)?.[0];
-    if (!year) throw new Error(`Nao foi possivel inferir o ano PRF do arquivo: ${csvPath}. Use --year=AAAA.`);
+    if (!year)
+        throw new Error(
+            `Nao foi possivel inferir o ano PRF do arquivo: ${csvPath}. Use --year=AAAA.`,
+        );
     return Number(year);
 }
 
 function getArguments(): { inputFiles: string[]; sourceYear?: number } {
     const argumentsList = process.argv.slice(2);
-    const yearArgument = argumentsList.find((argument) => argument.startsWith("--year="));
-    const sourceYear = yearArgument ? Number(yearArgument.slice("--year=".length)) : undefined;
-    const inputFiles = argumentsList.filter((argument) => !argument.startsWith("--"));
+    const yearArgument = argumentsList.find((argument) =>
+        argument.startsWith("--year="),
+    );
+    const sourceYear = yearArgument
+        ? Number(yearArgument.slice("--year=".length))
+        : undefined;
+    const inputFiles = argumentsList.filter(
+        (argument) => !argument.startsWith("--"),
+    );
 
-    if (sourceYear !== undefined && (!Number.isInteger(sourceYear) || sourceYear < 2000 || sourceYear > 2100)) {
-        throw new Error("O argumento --year deve ser um ano valido entre 2000 e 2100.");
+    if (
+        sourceYear !== undefined &&
+        (!Number.isInteger(sourceYear) ||
+            sourceYear < 2000 ||
+            sourceYear > 2100)
+    ) {
+        throw new Error(
+            "O argumento --year deve ser um ano valido entre 2000 e 2100.",
+        );
     }
 
     return { inputFiles, sourceYear };
 }
 
-async function persistBatch(rows: Array<{ key: string; data: Prisma.AccidentUncheckedCreateInput }>): Promise<{ inserted: number; updated: number }> {
+async function persistBatch(
+    rows: Array<{ key: string; data: Prisma.AccidentUncheckedCreateInput }>,
+): Promise<{ inserted: number; updated: number }> {
     const uniqueRows = [...new Map(rows.map((row) => [row.key, row])).values()];
     const keys = uniqueRows.map((row) => row.key);
     const existing = await prisma.accident.findMany({
         where: { source_record_key: { in: keys } },
-        select: { source_record_key: true }
+        select: { source_record_key: true },
     });
     const existingKeys = new Set(existing.map((row) => row.source_record_key));
 
@@ -116,25 +159,37 @@ async function persistBatch(rows: Array<{ key: string; data: Prisma.AccidentUnch
             prisma.accident.upsert({
                 where: { source_record_key: row.key },
                 create: row.data,
-                update: row.data
-            })
-        )
+                update: row.data,
+            }),
+        ),
     );
 
     return {
         inserted: uniqueRows.filter((row) => !existingKeys.has(row.key)).length,
-        updated: uniqueRows.filter((row) => existingKeys.has(row.key)).length
+        updated: uniqueRows.filter((row) => existingKeys.has(row.key)).length,
     };
 }
 
-async function processCsv(csvPath: string, sourceYear: number): Promise<ImportStats> {
-    const stats: ImportStats = { processedRows: 0, filteredRows: 0, insertedRows: 0, updatedRows: 0, invalidRows: 0 };
-    const batch: Array<{ key: string; data: Prisma.AccidentUncheckedCreateInput }> = [];
+async function processCsv(
+    csvPath: string,
+    sourceYear: number,
+): Promise<ImportStats> {
+    const stats: ImportStats = {
+        processedRows: 0,
+        filteredRows: 0,
+        insertedRows: 0,
+        updatedRows: 0,
+        invalidRows: 0,
+    };
+    const batch: Array<{
+        key: string;
+        data: Prisma.AccidentUncheckedCreateInput;
+    }> = [];
     const parser = fs.createReadStream(csvPath).pipe(
         csvParser({
             separator: ";",
-            mapHeaders: ({ header }) => header.trim().toLowerCase()
-        })
+            mapHeaders: ({ header }) => header.trim().toLowerCase(),
+        }),
     );
 
     for await (const rowValue of parser) {
@@ -175,7 +230,9 @@ async function processCsv(csvPath: string, sourceYear: number): Promise<ImportSt
         const data: Prisma.AccidentUncheckedCreateInput = {
             tipo_acidente: row.tipo_acidente || "Acidente nao especificado",
             classificacao_acidente: mapClassificacao(mortos, graves, leves),
-            condicao_meteorologica: mapCondicaoTempo(row.condicao_metereologica ?? row.condicao_meteorologica),
+            condicao_meteorologica: mapCondicaoTempo(
+                row.condicao_metereologica ?? row.condicao_meteorologica,
+            ),
             description,
             latitude,
             longitude,
@@ -184,7 +241,7 @@ async function processCsv(csvPath: string, sourceYear: number): Promise<ImportSt
             source: "PRF",
             source_record_id: sourceRecordId,
             source_year: sourceYear,
-            source_record_key: key
+            source_record_key: key,
         };
 
         batch.push({ key, data });
@@ -207,24 +264,42 @@ async function processCsv(csvPath: string, sourceYear: number): Promise<ImportSt
 async function importPrfAccidents(): Promise<void> {
     const { inputFiles, sourceYear } = getArguments();
     if (inputFiles.length === 0) {
-        throw new Error("Informe ao menos um CSV. Exemplo: pnpm import:prf ./acidentes-2026.csv --year=2026");
+        throw new Error(
+            "Informe ao menos um CSV. Exemplo: pnpm import:prf ./acidentes-2026.csv --year=2026",
+        );
     }
 
-    let total: ImportStats = { processedRows: 0, filteredRows: 0, insertedRows: 0, updatedRows: 0, invalidRows: 0 };
+    let total: ImportStats = {
+        processedRows: 0,
+        filteredRows: 0,
+        insertedRows: 0,
+        updatedRows: 0,
+        invalidRows: 0,
+    };
     for (const file of inputFiles) {
         const csvPath = resolve(process.cwd(), file);
-        if (!fs.existsSync(csvPath)) throw new Error(`Arquivo nao encontrado: ${csvPath}`);
-        const stats = await processCsv(csvPath, sourceYear ?? inferSourceYear(csvPath));
+        if (!fs.existsSync(csvPath))
+            throw new Error(`Arquivo nao encontrado: ${csvPath}`);
+        const stats = await processCsv(
+            csvPath,
+            sourceYear ?? inferSourceYear(csvPath),
+        );
         total = {
             processedRows: total.processedRows + stats.processedRows,
             filteredRows: total.filteredRows + stats.filteredRows,
             insertedRows: total.insertedRows + stats.insertedRows,
             updatedRows: total.updatedRows + stats.updatedRows,
-            invalidRows: total.invalidRows + stats.invalidRows
+            invalidRows: total.invalidRows + stats.invalidRows,
         };
     }
 
-    console.log(JSON.stringify({ source: "PRF", municipality: "IMPERATRIZ-MA", ...total }));
+    console.log(
+        JSON.stringify({
+            source: "PRF",
+            municipality: "IMPERATRIZ-MA",
+            ...total,
+        }),
+    );
 }
 
 importPrfAccidents()
