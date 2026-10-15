@@ -163,6 +163,52 @@ export const updateAccidentBodySchema = {
     },
 } as const;
 
+export const accidentMapItemSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: [
+        "id",
+        "tipo_acidente",
+        "classificacao_acidente",
+        "condicao_meteorologica",
+        "latitude",
+        "longitude",
+        "occurred_at",
+        "severity",
+        "source",
+    ],
+    properties: {
+        id: { type: "string" },
+        tipo_acidente: { type: "string" },
+        classificacao_acidente: {
+            type: "string",
+            enum: ["com_vitima", "sem_vitima"],
+        },
+        condicao_meteorologica: {
+            type: "string",
+            enum: ["ceu_claro", "chuva", "nublado", "garoa"],
+        },
+        latitude: { type: "number" },
+        longitude: { type: "number" },
+        occurred_at: { type: "string", format: "date-time" },
+        severity: accidentSeveritySchema,
+        source: { type: "string", enum: ["APP", "PRF"] },
+    },
+} as const;
+
+export const accidentsMapResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data", "total"],
+    properties: {
+        data: {
+            type: "array",
+            items: accidentMapItemSchema,
+        },
+        total: { type: "number" },
+    },
+} as const;
+
 export const accidentsListResponseSchema = {
     type: "object",
     additionalProperties: false,
