@@ -9,6 +9,9 @@ import type {
     AccidentImage,
     AccidentListQuery,
     AccidentListResult,
+    AccidentMapItem,
+    AccidentMapQuery,
+    AccidentMapResult,
     AccidentSeverity,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
@@ -247,6 +250,110 @@ export async function listAccidents(
             totalPages: Math.max(1, Math.ceil(total / limit)),
         },
     };
+}
+
+const MAP_MAX_RESULTS = 5000;
+
+export async function listAccidentsForMap(
+    query: AccidentMapQuery = {},
+): Promise<AccidentMapResult> {
+    const search = query.search?.trim();
+    const severity = query.severity;
+    const classificacao = query.classificacao;
+    const condicaoMeteorologica = query.condicao_meteorologica;
+    const source = query.source;
+    const sourceYear = query.source_year;
+    const from = query.from ? new Date(query.from) : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
+    const minLat = query.minLat;
+    const maxLat = query.maxLat;
+    const minLng = query.minLng;
+    const maxLng = query.maxLng;
+
+    const where = {
+        ...(search
+            ? {
+                  OR: [
+                      {
+                          tipo_acidente: {
+                              contains: search,
+                              mode: "insensitive" as const,
+                          },
+                      },
+                      {
+                          description: {
+                              contains: search,
+                              mode: "insensitive" as const,
+                          },
+                      },
+                  ],
+              }
+            : {}),
+        ...(severity ? { severity } : {}),
+        ...(classificacao
+            ? { classificacao_acidente: classificacao }
+            : {}),
+        ...(condicaoMeteorologica
+            ? { condicao_meteorologica: condicaoMeteorologica }
+            : {}),
+        ...(source ? { source } : {}),
+        ...(sourceYear !== undefined ? { source_year: sourceYear } : {}),
+        ...(from || to
+            ? {
+                  occurred_at: {
+                      ...(from ? { gte: from } : {}),
+                      ...(to ? { lte: to } : {}),
+                  },
+              }
+            : {}),
+        ...(minLat !== undefined || maxLat !== undefined
+            ? {
+                  latitude: {
+                      ...(minLat !== undefined ? { gte: minLat } : {}),
+                      ...(maxLat !== undefined ? { lte: maxLat } : {}),
+                  },
+              }
+            : {}),
+        ...(minLng !== undefined || maxLng !== undefined
+            ? {
+                  longitude: {
+                      ...(minLng !== undefined ? { gte: minLng } : {}),
+                      ...(maxLng !== undefined ? { lte: maxLng } : {}),
+                  },
+              }
+            : {}),
+    };
+
+    const accidents = await prisma.accident.findMany({
+        where,
+        select: {
+            id: true,
+            tipo_acidente: true,
+            classificacao_acidente: true,
+            condicao_meteorologica: true,
+            latitude: true,
+            longitude: true,
+            occurred_at: true,
+            severity: true,
+            source: true,
+        },
+        orderBy: { occurred_at: "desc" },
+        take: MAP_MAX_RESULTS,
+    });
+
+    const data: AccidentMapItem[] = accidents.map((a) => ({
+        id: a.id,
+        tipo_acidente: a.tipo_acidente,
+        classificacao_acidente: a.classificacao_acidente,
+        condicao_meteorologica: a.condicao_meteorologica,
+        latitude: a.latitude,
+        longitude: a.longitude,
+        occurred_at: a.occurred_at,
+        severity: a.severity,
+        source: a.source,
+    }));
+
+    return { data, total: data.length };
 }
 
 export async function getAccident(accidentId: string): Promise<Accident> {
