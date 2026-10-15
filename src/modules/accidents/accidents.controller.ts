@@ -8,6 +8,7 @@ import {
     accidentCreateResponseSchema,
     accidentResponseSchema,
     accidentsListResponseSchema,
+    accidentsMapResponseSchema,
     createAccidentCommentBodySchema,
     createAccidentBodySchema,
     deletedAccidentResponseSchema,
@@ -26,10 +27,12 @@ import {
     listAccidentComments,
     listAccidentImages,
     listAccidents,
+    listAccidentsForMap,
     updateAccident,
 } from "./accidents.service.js";
 import type {
     AccidentListQuery,
+    AccidentMapQuery,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
@@ -81,8 +84,48 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         },
     );
 
+    app.get<{
+        Querystring: AccidentMapQuery;
+    }>(
+        "/map",
+        {
+            schema: {
+                tags: ['Accidents'],
+                summary: 'Listar acidentes para o mapa (sem paginação, payload leve)',
+                querystring: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                        search: { type: "string" },
+                        severity: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                        classificacao: { type: "string", enum: ["com_vitima", "sem_vitima"] },
+                        condicao_meteorologica: { type: "string", enum: ["ceu_claro", "chuva", "nublado", "garoa"] },
+                        source: { type: "string", enum: ["APP", "PRF"] },
+                        source_year: { type: "number" },
+                        from: { type: "string", format: "date-time" },
+                        to: { type: "string", format: "date-time" },
+                        minLat: { type: "number", minimum: -90, maximum: 90 },
+                        maxLat: { type: "number", minimum: -90, maximum: 90 },
+                        minLng: { type: "number", minimum: -180, maximum: 180 },
+                        maxLng: { type: "number", minimum: -180, maximum: 180 },
+                    },
+                },
+                response: {
+                    200: accidentsMapResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            const result = await listAccidentsForMap(request.query);
+
+            return reply.code(200).send(result);
+        },
+    );
+
+
+
     app.get<{ Params: { id: string } }>(
-        "/:id",
+        "/:id([0-9a-fA-F-]{36})",
         {
             schema: {
                 tags: ['Accidents'],
