@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "is_email_verified" BOOLEAN NOT NULL DEFAULT false;
