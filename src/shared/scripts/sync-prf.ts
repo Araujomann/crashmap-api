@@ -1,7 +1,8 @@
+import "dotenv/config.js";
 import fs from "node:fs";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, basename } from "node:path";
+import { join, basename, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { spawn } from "node:child_process";
@@ -29,14 +30,12 @@ function normalizeSourceUrl(value: string): string {
 const sourceUrl = normalizeSourceUrl(configuredSourceUrl);
 
 function runImporter(csvPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+    return new Promise((resolvePromise, rejectPromise) => {
         const child = spawn(
-            command,
+            process.execPath,
             [
-                "exec",
-                "tsx",
-                "src/shared/scripts/import-prf.ts",
+                resolve(process.cwd(), "node_modules/tsx/dist/cli.mjs"),
+                resolve(process.cwd(), "src/shared/scripts/import-prf.ts"),
                 csvPath,
                 `--year=${sourceYear}`,
             ],
@@ -46,13 +45,13 @@ function runImporter(csvPath: string): Promise<void> {
             },
         );
 
-        child.on("error", reject);
+        child.on("error", rejectPromise);
         child.on("exit", (code) => {
             if (code === 0) {
-                resolve();
+                resolvePromise();
                 return;
             }
-            reject(
+            rejectPromise(
                 new Error(
                     `Importador PRF terminou com codigo ${code ?? "desconhecido"}.`,
                 ),
