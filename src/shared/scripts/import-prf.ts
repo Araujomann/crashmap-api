@@ -45,10 +45,17 @@ function parseDateAndHour(
 ): Date | null {
     const normalizedDate = (dateValue ?? "").trim();
     const dateMatch = normalizedDate.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/);
-    const isoDateMatch = normalizedDate.match(/^(\d{4})[\/-](\d{2})[\/-](\d{2})$/);
+    const isoDateMatch = normalizedDate.match(
+        /^(\d{4})[\/-](\d{2})[\/-](\d{2})$/,
+    );
     if (!dateMatch && !isoDateMatch) return null;
 
-    const [, day, month, year] = dateMatch ?? ["", isoDateMatch?.[3], isoDateMatch?.[2], isoDateMatch?.[1]];
+    const [, day, month, year] = dateMatch ?? [
+        "",
+        isoDateMatch?.[3],
+        isoDateMatch?.[2],
+        isoDateMatch?.[1],
+    ];
     const time = (timeValue ?? "00:00:00").trim();
     if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) return null;
 
