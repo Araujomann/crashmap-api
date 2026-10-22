@@ -15,7 +15,18 @@ if (!configuredSourceUrl) {
     throw new Error("Missing required environment variable: PRF_SOURCE_URL");
 }
 
-const sourceUrl = configuredSourceUrl;
+function normalizeSourceUrl(value: string): string {
+    const url = new URL(value);
+    const match = url.pathname.match(/^\/file\/d\/([^/]+)/);
+
+    if (url.hostname === "drive.google.com" && match) {
+        return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(match[1])}`;
+    }
+
+    return value;
+}
+
+const sourceUrl = normalizeSourceUrl(configuredSourceUrl);
 
 function runImporter(csvPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -60,15 +71,19 @@ async function downloadSource(directory: string): Promise<string> {
 
     const contentType =
         response.headers.get("content-type")?.toLowerCase() ?? "";
+    const contentDisposition =
+        response.headers.get("content-disposition")?.toLowerCase() ?? "";
     if (contentType.includes("text/html")) {
         throw new Error(
             "PRF_SOURCE_URL aponta para uma pagina HTML; use o link direto de Baixar planilha.",
         );
     }
 
-    const extension = new URL(sourceUrl).pathname.toLowerCase().endsWith(".zip")
-        ? ".zip"
-        : ".csv";
+    const isZip =
+        new URL(sourceUrl).pathname.toLowerCase().endsWith(".zip") ||
+        contentType.includes("zip") ||
+        contentDisposition.includes(".zip");
+    const extension = isZip ? ".zip" : ".csv";
     const downloadedPath = join(directory, `prf-source${extension}`);
     await pipeline(
         Readable.fromWeb(response.body as never),

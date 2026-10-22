@@ -78,6 +78,40 @@ export interface AccidentListResult {
     };
 }
 
+export type AccidentSource = "APP" | "PRF";
+
+export interface AccidentMapQuery {
+    search?: string;
+    severity?: AccidentSeverity;
+    classificacao?: AccidentClassification;
+    condicao_meteorologica?: AccidentWeatherCondition;
+    source?: AccidentSource;
+    source_year?: number;
+    from?: string;
+    to?: string;
+    minLat?: number;
+    maxLat?: number;
+    minLng?: number;
+    maxLng?: number;
+}
+
+export interface AccidentMapItem {
+    id: string;
+    tipo_acidente: string;
+    classificacao_acidente: AccidentClassification;
+    condicao_meteorologica: AccidentWeatherCondition;
+    latitude: number;
+    longitude: number;
+    occurred_at: Date;
+    severity: AccidentSeverity;
+    source: AccidentSource;
+}
+
+export interface AccidentMapResult {
+    data: AccidentMapItem[];
+    total: number;
+}
+
 export interface UpdateAccidentBody {
     tipo_acidente?: string;
     description?: string | null;

@@ -8,6 +8,21 @@ test("accidents routes reject missing auth and invalid create payloads", async (
     await app.ready();
 
     try {
+        const mapResponse = await app.inject({
+            method: "GET",
+            url: "/accidents/map",
+        });
+
+        assert.equal(mapResponse.statusCode, 200);
+        assert.ok(Array.isArray(mapResponse.json().data));
+
+        const invalidIdResponse = await app.inject({
+            method: "GET",
+            url: "/accidents/not-a-uuid",
+        });
+
+        assert.equal(invalidIdResponse.statusCode, 404);
+
         const missingAuthResponse = await app.inject({
             method: "POST",
             url: "/accidents",
