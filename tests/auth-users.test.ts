@@ -168,3 +168,113 @@ test("users me flow returns and updates the current profile", async () => {
         await app.close();
     }
 });
+
+test("gamification counts only the authenticated user's approved app reports", async () => {
+    const app = await buildApp();
+    await app.ready();
+
+    const uniqueSuffix = `${Date.now()}`;
+    const password = "Test12345!";
+    const userIds: string[] = [];
+    const accidentIds: string[] = [];
+
+    try {
+        const registerUser = async (email: string, name: string) => {
+            const response = await app.inject({
+                method: "POST",
+                url: "/auth/register",
+                payload: { name, email, password },
+            });
+
+            assert.equal(response.statusCode, 201);
+            const body = response.json();
+            userIds.push(body.data.user.id as string);
+            return {
+                id: body.data.user.id as string,
+                accessToken: body.data.tokens.accessToken as string,
+            };
+        };
+
+        const firstUser = await registerUser(
+            `gamification-first-${uniqueSuffix}@example.com`,
+            `Gamification First ${uniqueSuffix}`,
+        );
+        const secondUser = await registerUser(
+            `gamification-second-${uniqueSuffix}@example.com`,
+            `Gamification Second ${uniqueSuffix}`,
+        );
+
+        const createReport = async (
+            ownerId: string,
+            suffix: string,
+            moderationStatus: "PENDING" | "APPROVED",
+            source: "APP" | "PRF" = "APP",
+        ) => {
+            const accident = await prisma.accident.create({
+                data: {
+                    tipo_acidente: `gamification-${uniqueSuffix}-${suffix}`,
+                    classificacao_acidente: "sem_vitima",
+                    condicao_meteorologica: "ceu_claro",
+                    latitude: -23.55,
+                    longitude: -46.63,
+                    occurred_at: new Date("2026-11-09T12:00:00.000Z"),
+                    severity: "low",
+                    created_by_id: ownerId,
+                    source,
+                    moderation_status: moderationStatus,
+                },
+            });
+            accidentIds.push(accident.id);
+        };
+
+        await createReport(firstUser.id, "first-approved", "APPROVED");
+        await createReport(firstUser.id, "pending", "PENDING");
+        await createReport(firstUser.id, "non-app", "APPROVED", "PRF");
+        await createReport(secondUser.id, "second-approved-1", "APPROVED");
+        await createReport(secondUser.id, "second-approved-2", "APPROVED");
+
+        const missingAuthResponse = await app.inject({
+            method: "GET",
+            url: "/users/me/gamification",
+        });
+        assert.equal(missingAuthResponse.statusCode, 401);
+
+        const firstStatsResponse = await app.inject({
+            method: "GET",
+            url: "/users/me/gamification",
+            headers: {
+                authorization: `Bearer ${firstUser.accessToken}`,
+            },
+        });
+        assert.equal(firstStatsResponse.statusCode, 200);
+        assert.deepEqual(firstStatsResponse.json().data, {
+            approved_reports_count: 1,
+        });
+
+        const secondStatsResponse = await app.inject({
+            method: "GET",
+            url: "/users/me/gamification",
+            headers: {
+                authorization: `Bearer ${secondUser.accessToken}`,
+            },
+        });
+        assert.equal(secondStatsResponse.statusCode, 200);
+        assert.deepEqual(secondStatsResponse.json().data, {
+            approved_reports_count: 2,
+        });
+    } finally {
+        if (accidentIds.length > 0) {
+            await prisma.accident.deleteMany({
+                where: { id: { in: accidentIds } },
+            });
+        }
+        for (const userId of userIds) {
+            await prisma.refreshToken.deleteMany({
+                where: { user_id: userId },
+            });
+            await prisma.user.deleteMany({ where: { id: userId } });
+        }
+
+        await app.close();
+    }
+});

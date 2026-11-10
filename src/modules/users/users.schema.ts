@@ -17,3 +17,19 @@ export const meResponseSchema = {
         data: authUserSchema,
     },
 } as const;
+
+export const gamificationStatsResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["approved_reports_count"],
+            properties: {
+                approved_reports_count: { type: "integer", minimum: 0 },
+            },
+        },
+    },
+} as const;

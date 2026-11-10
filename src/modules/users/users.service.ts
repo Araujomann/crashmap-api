@@ -2,7 +2,10 @@ import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { toAuthUser } from "../auth/auth.service.js";
 import type { AuthUser } from "../auth/auth.types.js";
-import type { UpdateMeBody } from "./users.types.js";
+import type {
+    UpdateMeBody,
+    UserGamificationStats,
+} from "./users.types.js";
 
 export async function getMe(userId: string): Promise<AuthUser> {
     const user = await prisma.user.findUnique({
@@ -14,6 +17,20 @@ export async function getMe(userId: string): Promise<AuthUser> {
     }
 
     return toAuthUser(user);
+}
+
+export async function getMyGamificationStats(
+    userId: string,
+): Promise<UserGamificationStats> {
+    const approvedReportsCount = await prisma.accident.count({
+        where: {
+            created_by_id: userId,
+            source: "APP",
+            moderation_status: "APPROVED",
+        },
+    });
+
+    return { approved_reports_count: approvedReportsCount };
 }
 
 export async function updateMe(
