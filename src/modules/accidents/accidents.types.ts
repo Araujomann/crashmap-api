@@ -3,6 +3,7 @@ import type { AuthUser } from "../auth/auth.types.js";
 export type AccidentSeverity = "low" | "medium" | "high" | "critical";
 export type AccidentClassification = "com_vitima" | "sem_vitima";
 export type AccidentWeatherCondition = "ceu_claro" | "chuva" | "nublado" | "garoa";
+export type AccidentModerationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface Accident {
     id: string;
@@ -14,6 +15,10 @@ export interface Accident {
     longitude: number;
     occurred_at: Date;
     severity: AccidentSeverity;
+    source: AccidentSource;
+    moderation_status: AccidentModerationStatus;
+    moderation_message: string | null;
+    moderated_at: Date | null;
     created_by_id: string | null;
     created_at: Date;
     updated_at: Date;
@@ -43,6 +48,56 @@ export interface AccidentDetail extends Accident {
     images: AccidentImage[];
 }
 
+export interface AccidentModerationHistoryItem {
+    id: string;
+    previous_status: AccidentModerationStatus;
+    new_status: AccidentModerationStatus;
+    public_message: string | null;
+    internal_note: string | null;
+    created_at: Date;
+    moderated_by: {
+        id: string;
+        name: string;
+        email: string;
+    };
+}
+
+export interface ModerationAccident extends AccidentDetail {
+    moderation_internal_note: string | null;
+    created_by: {
+        id: string;
+        name: string;
+        email: string;
+    } | null;
+    moderation_history: AccidentModerationHistoryItem[];
+}
+
+export interface AccidentModerationListItem extends Accident {
+    created_by: {
+        id: string;
+        name: string;
+        email: string;
+    } | null;
+}
+
+export interface AccidentModerationListResult {
+    data: AccidentModerationListItem[];
+    pagination: AccidentListResult["pagination"];
+}
+
+export interface AccidentModerationSummary {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+}
+
+export interface ModerateAccidentBody {
+    status: Exclude<AccidentModerationStatus, "PENDING">;
+    publicMessage?: string;
+    internalNote?: string;
+}
+
 export interface CreateAccidentBody {
     tipo_acidente: string;
     classificacao_acidente: AccidentClassification;
@@ -59,6 +114,7 @@ export interface AccidentListQuery {
     limit?: number;
     search?: string;
     severity?: AccidentSeverity;
+    status?: AccidentModerationStatus;
     sort?: "newest" | "oldest";
     from?: string;
     to?: string;

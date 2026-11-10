@@ -3,6 +3,11 @@ export const accidentSeveritySchema = {
     enum: ["low", "medium", "high", "critical"],
 } as const;
 
+export const accidentModerationStatusSchema = {
+    type: "string",
+    enum: ["PENDING", "APPROVED", "REJECTED"],
+} as const;
+
 export const accidentSchema = {
     type: "object",
     additionalProperties: false,
@@ -16,6 +21,10 @@ export const accidentSchema = {
         "longitude",
         "occurred_at",
         "severity",
+        "source",
+        "moderation_status",
+        "moderation_message",
+        "moderated_at",
         "created_by_id",
         "created_at",
         "updated_at",
@@ -36,6 +45,10 @@ export const accidentSchema = {
         longitude: { type: "number" },
         occurred_at: { type: "string", format: "date-time" },
         severity: accidentSeveritySchema,
+        source: { type: "string", enum: ["APP", "PRF"] },
+        moderation_status: accidentModerationStatusSchema,
+        moderation_message: { type: ["string", "null"] },
+        moderated_at: { type: ["string", "null"], format: "date-time" },
         created_by_id: { type: ["string", "null"] },
         created_at: { type: "string", format: "date-time" },
         updated_at: { type: "string", format: "date-time" },
@@ -232,6 +245,124 @@ export const accidentsListResponseSchema = {
     },
 } as const;
 
+export const accidentModerationHistoryItemSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: [
+        "id",
+        "previous_status",
+        "new_status",
+        "public_message",
+        "internal_note",
+        "created_at",
+        "moderated_by",
+    ],
+    properties: {
+        id: { type: "string" },
+        previous_status: accidentModerationStatusSchema,
+        new_status: accidentModerationStatusSchema,
+        public_message: { type: ["string", "null"] },
+        internal_note: { type: ["string", "null"] },
+        created_at: { type: "string", format: "date-time" },
+        moderated_by: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "name", "email"],
+            properties: {
+                id: { type: "string" },
+                name: { type: "string" },
+                email: { type: "string" },
+            },
+        },
+    },
+} as const;
+
+export const moderationAccidentSchema = {
+    ...accidentDetailSchema,
+    required: [
+        ...accidentDetailSchema.required,
+        "moderation_internal_note",
+        "created_by",
+        "moderation_history",
+    ],
+    properties: {
+        ...accidentDetailSchema.properties,
+        moderation_internal_note: { type: ["string", "null"] },
+        created_by: {
+            type: ["object", "null"],
+            additionalProperties: false,
+            required: ["id", "name", "email"],
+            properties: {
+                id: { type: "string" },
+                name: { type: "string" },
+                email: { type: "string" },
+            },
+        },
+        moderation_history: {
+            type: "array",
+            items: accidentModerationHistoryItemSchema,
+        },
+    },
+} as const;
+
+export const moderationAccidentListItemSchema = {
+    ...accidentSchema,
+    required: [...accidentSchema.required, "created_by"],
+    properties: {
+        ...accidentSchema.properties,
+        created_by: {
+            type: ["object", "null"],
+            additionalProperties: false,
+            required: ["id", "name", "email"],
+            properties: {
+                id: { type: "string" },
+                name: { type: "string" },
+                email: { type: "string" },
+            },
+        },
+    },
+} as const;
+
+export const accidentModerationListResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data", "pagination"],
+    properties: {
+        data: { type: "array", items: moderationAccidentListItemSchema },
+        pagination: accidentsListResponseSchema.properties.pagination,
+    },
+} as const;
+
+export const accidentModerationSummaryResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["total", "pending", "approved", "rejected"],
+            properties: {
+                total: { type: "number" },
+                pending: { type: "number" },
+                approved: { type: "number" },
+                rejected: { type: "number" },
+            },
+        },
+    },
+} as const;
+
+export const moderateAccidentBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["status"],
+    properties: {
+        status: { type: "string", enum: ["APPROVED", "REJECTED"] },
+        publicMessage: { type: "string", maxLength: 2000 },
+        internalNote: { type: "string", maxLength: 4000 },
+    },
+} as const;
+
 export const accidentResponseSchema = {
     type: "object",
     additionalProperties: false,
@@ -248,6 +379,13 @@ export const accidentCreateResponseSchema = {
     properties: {
         data: accidentSchema,
     },
+} as const;
+
+export const moderationAccidentResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: { data: moderationAccidentSchema },
 } as const;
 
 export const accidentCommentsListResponseSchema = {

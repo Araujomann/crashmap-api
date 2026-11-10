@@ -37,6 +37,17 @@ enum accident_source {
   PRF
 }
 
+enum accident_moderation_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum push_platform {
+  android
+  ios
+}
+
 model User {
   id  String @id @default(uuid())
   name String
@@ -49,10 +60,26 @@ model User {
   updated_at DateTime @updatedAt
 
   accidents Accident[]
+  moderated_accidents Accident[] @relation("AccidentModerator")
   accident_comments AccidentComment[]
   accident_images AccidentImage[]
+  moderation_decisions AccidentModerationHistory[]
+  push_tokens PushToken[]
   refresh_tokens RefreshToken[]
   verification_tokens VerificationToken[]
+}
+
+model PushToken {
+  id         String        @id @default(uuid())
+  user_id    String
+  token      String        @unique
+  platform   push_platform
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model VerificationToken {
@@ -84,16 +111,41 @@ model Accident {
   source_record_id String?
   source_year Int?
   source_record_key String? @unique
+  moderation_status accident_moderation_status @default(PENDING)
+  moderation_message String?
+  moderation_internal_note String?
+  moderated_at DateTime?
+  moderated_by_id String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   created_by User? @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  moderated_by User? @relation("AccidentModerator", fields: [moderated_by_id], references: [id], onDelete: SetNull)
   comments AccidentComment[]
   images AccidentImage[]
+  moderation_history AccidentModerationHistory[]
 
   @@index([created_by_id])
   @@index([occurred_at])
   @@index([severity])
+  @@index([moderation_status, created_at])
+}
+
+model AccidentModerationHistory {
+  id String @id @default(uuid())
+  accident_id String
+  moderated_by_id String
+  previous_status accident_moderation_status
+  new_status accident_moderation_status
+  public_message String?
+  internal_note String?
+  created_at DateTime @default(now())
+
+  accident Accident @relation(fields: [accident_id], references: [id], onDelete: Restrict)
+  moderated_by User @relation(fields: [moderated_by_id], references: [id], onDelete: Restrict)
+
+  @@index([accident_id, created_at])
+  @@index([moderated_by_id])
 }
 
 model AccidentComment {

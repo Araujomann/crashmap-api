@@ -246,6 +246,7 @@ async function processCsv(
             occurred_at: occurredAt,
             severity: mapSeverity(mortos, graves, leves),
             source: "PRF",
+            moderation_status: "APPROVED",
             source_record_id: sourceRecordId,
             source_year: sourceYear,
             source_record_key: key,

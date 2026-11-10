@@ -8,6 +8,7 @@ import { AppError } from "./shared/errors/app-error.js";
 import { buildDataResponseSchema } from "./shared/http/api-response.js";
 import { accidentsRoutes } from "./modules/accidents/accidents.controller.js";
 import { authRoutes } from "./modules/auth/auth.controller.js";
+import { notificationsRoutes } from "./modules/notifications/notifications.controller.js";
 import { usersRoutes } from "./modules/users/users.controller.js";
 
 
@@ -36,6 +37,7 @@ export async function buildApp() {
             tags: [
                 { name: "Auth", description: "Endpoints de Autenticação" },
                 { name: "Users", description: "Endpoints de Usuários" },
+                { name: "Notifications", description: "Notificações push" },
                 { name: "Accidents", description: "Endpoints de Acidentes" },
             ],
             components: {
@@ -107,6 +109,7 @@ export async function buildApp() {
 
     app.register(authRoutes, { prefix: "/auth" });
     app.register(usersRoutes, { prefix: "/users" });
+    app.register(notificationsRoutes, { prefix: "/notifications" });
     app.register(accidentsRoutes, { prefix: "/accidents" });
 
     app.get(

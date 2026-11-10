@@ -1,10 +1,16 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
-import { requireAuthenticatedUser, requireVerifiedEmail } from "../auth/auth.guard.js";
+import {
+    requireAuthenticatedUser,
+    requireModerator,
+    requireVerifiedEmail,
+} from "../auth/auth.guard.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import {
     accidentIdParamsSchema,
     accidentCommentsListResponseSchema,
     accidentImagesListResponseSchema,
+    accidentModerationListResponseSchema,
+    accidentModerationSummaryResponseSchema,
     accidentCreateResponseSchema,
     accidentResponseSchema,
     accidentsListResponseSchema,
@@ -14,6 +20,8 @@ import {
     deletedAccidentResponseSchema,
     accidentCommentSchema,
     accidentImageSchema,
+    moderationAccidentResponseSchema,
+    moderateAccidentBodySchema,
     updateAccidentBodySchema,
 } from "./accidents.schema.js";
 import {
@@ -27,15 +35,21 @@ import {
     listAccidentComments,
     listAccidentImages,
     listAccidents,
+    getAccidentForModeration,
+    getAccidentModerationSummary,
+    listAccidentsForModeration,
     listAccidentsForMap,
+    moderateAccident,
     updateAccident,
 } from "./accidents.service.js";
+import { sendApprovedAccidentNotification } from "../notifications/notifications.service.js";
 import type {
     AccidentListQuery,
     AccidentMapQuery,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
+    ModerateAccidentBody,
     UpdateAccidentBody,
 } from "./accidents.types.js";
 
@@ -64,11 +78,103 @@ async function readAccidentImageUpload(request: FastifyRequest) {
 }
 
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
+    app.get(
+        "/moderation/summary",
+        {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
+            schema: {
+                tags: ["Accidents"],
+                summary: "Resumo dos relatos enviados pelo aplicativo",
+                security: [{ bearerAuth: [] }],
+                response: { 200: accidentModerationSummaryResponseSchema },
+            },
+        },
+        async (_, reply) => {
+            const summary = await getAccidentModerationSummary();
+
+            return reply.code(200).send({ data: summary });
+        },
+    );
+
+    app.get<{
+        Querystring: AccidentListQuery;
+    }>(
+        "/moderation",
+        {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
+            schema: {
+                tags: ["Accidents"],
+                summary: "Listar relatos para moderação",
+                security: [{ bearerAuth: [] }],
+                querystring: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                        page: { type: "integer", minimum: 1 },
+                        limit: { type: "integer", minimum: 1, maximum: 50 },
+                        search: { type: "string" },
+                        status: {
+                            type: "string",
+                            enum: ["PENDING", "APPROVED", "REJECTED"],
+                        },
+                        severity: {
+                            type: "string",
+                            enum: ["low", "medium", "high", "critical"],
+                        },
+                        sort: { type: "string", enum: ["newest", "oldest"] },
+                    },
+                },
+                response: { 200: accidentModerationListResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const result = await listAccidentsForModeration(request.query);
+
+            return reply.code(200).send(result);
+        },
+    );
+
+    app.get<{ Params: { id: string } }>(
+        "/moderation/:id",
+        {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
+            schema: {
+                tags: ["Accidents"],
+                summary: "Obter detalhes de um relato para moderação",
+                security: [{ bearerAuth: [] }],
+                params: accidentIdParamsSchema,
+                response: { 200: moderationAccidentResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const accident = await getAccidentForModeration(request.params.id);
+
+            return reply.code(200).send({ data: accident });
+        },
+    );
+
     app.get<{
         Querystring: AccidentListQuery;
     }>(
         "/",
         {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
             schema: {
                 tags: ['Accidents'],
                 summary: 'Listar acidentes com paginação e filtros',
@@ -398,6 +504,58 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             );
 
             return reply.code(200).send({ data: { deleted: true } });
+        },
+    );
+
+    app.patch<{
+        Params: { id: string };
+        Body: ModerateAccidentBody;
+    }>(
+        "/:id/moderation",
+        {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
+            schema: {
+                tags: ["Accidents"],
+                summary: "Aprovar ou rejeitar um relato",
+                security: [{ bearerAuth: [] }],
+                params: accidentIdParamsSchema,
+                body: moderateAccidentBodySchema,
+                response: { 200: moderationAccidentResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const accident = await moderateAccident(
+                request.authUser as AuthUser,
+                request.params.id,
+                request.body,
+            );
+
+            if (request.body.status === "APPROVED") {
+                try {
+                    const delivery = await sendApprovedAccidentNotification(
+                        accident.id,
+                    );
+                    request.log.info(
+                        {
+                            accidentId: accident.id,
+                            recipients: delivery.recipientCount,
+                            removedTokens: delivery.removedTokenCount,
+                        },
+                        "Accident approval notification processed",
+                    );
+                } catch (error) {
+                    request.log.error(
+                        { err: error, accidentId: accident.id },
+                        "Failed to send accident approval notifications",
+                    );
+                }
+            }
+
+            return reply.code(200).send({ data: accident });
         },
     );
 };

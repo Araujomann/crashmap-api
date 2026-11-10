@@ -12,10 +12,16 @@ import type {
     AccidentMapItem,
     AccidentMapQuery,
     AccidentMapResult,
+    AccidentModerationListItem,
+    AccidentModerationListResult,
+    AccidentModerationStatus,
+    AccidentModerationSummary,
     AccidentSeverity,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
+    ModerateAccidentBody,
+    ModerationAccident,
     UpdateAccidentBody,
 } from "./accidents.types.js";
 
@@ -29,6 +35,10 @@ function toAccident(accident: {
     longitude: number;
     occurred_at: Date;
     severity: AccidentSeverity;
+    source: "APP" | "PRF";
+    moderation_status: AccidentModerationStatus;
+    moderation_message: string | null;
+    moderated_at: Date | null;
     created_by_id: string | null;
     created_at: Date;
     updated_at: Date;
@@ -43,6 +53,10 @@ function toAccident(accident: {
         longitude: accident.longitude,
         occurred_at: accident.occurred_at,
         severity: accident.severity,
+        source: accident.source,
+        moderation_status: accident.moderation_status,
+        moderation_message: accident.moderation_message,
+        moderated_at: accident.moderated_at,
         created_by_id: accident.created_by_id,
         created_at: accident.created_at,
         updated_at: accident.updated_at,
@@ -97,6 +111,10 @@ function toAccidentDetail(accident: {
     longitude: number;
     occurred_at: Date;
     severity: AccidentSeverity;
+    source: "APP" | "PRF";
+    moderation_status: AccidentModerationStatus;
+    moderation_message: string | null;
+    moderated_at: Date | null;
     created_by_id: string | null;
     created_at: Date;
     updated_at: Date;
@@ -202,6 +220,7 @@ export async function listAccidents(
               }
             : {}),
         ...(severity ? { severity } : {}),
+        ...(query.status ? { moderation_status: query.status } : {}),
         ...(from || to
             ? {
                   occurred_at: {
@@ -271,6 +290,7 @@ export async function listAccidentsForMap(
     const maxLng = query.maxLng;
 
     const where = {
+        moderation_status: "APPROVED" as const,
         ...(search
             ? {
                   OR: [
@@ -357,8 +377,8 @@ export async function listAccidentsForMap(
 }
 
 export async function getAccident(accidentId: string): Promise<Accident> {
-    const accident = await prisma.accident.findUnique({
-        where: { id: accidentId },
+    const accident = await prisma.accident.findFirst({
+        where: { id: accidentId, moderation_status: "APPROVED" },
         include: {
             comments: {
                 orderBy: { created_at: "asc" },
@@ -395,6 +415,254 @@ export async function createAccident(
     });
 
     return toAccident(accident);
+}
+
+const moderationAccidentInclude = {
+    created_by: {
+        select: { id: true, name: true, email: true },
+    },
+    comments: { orderBy: { created_at: "asc" as const } },
+    images: { orderBy: { created_at: "asc" as const } },
+    moderation_history: {
+        orderBy: { created_at: "desc" as const },
+        include: {
+            moderated_by: {
+                select: { id: true, name: true, email: true },
+            },
+        },
+    },
+} as const;
+
+function toModerationAccident(
+    accident: {
+        id: string;
+        tipo_acidente: string;
+        classificacao_acidente: "com_vitima" | "sem_vitima";
+        condicao_meteorologica: "ceu_claro" | "chuva" | "nublado" | "garoa";
+        description: string | null;
+        latitude: number;
+        longitude: number;
+        occurred_at: Date;
+        severity: AccidentSeverity;
+        source: "APP" | "PRF";
+        moderation_status: AccidentModerationStatus;
+        moderation_message: string | null;
+        moderation_internal_note: string | null;
+        moderated_at: Date | null;
+        moderated_by_id: string | null;
+        created_by_id: string | null;
+        created_at: Date;
+        updated_at: Date;
+        created_by: { id: string; name: string; email: string } | null;
+        comments: Array<{
+            id: string;
+            accident_id: string;
+            created_by_id: string;
+            body: string;
+            created_at: Date;
+            updated_at: Date;
+        }>;
+        images: Array<{
+            id: string;
+            accident_id: string;
+            created_by_id: string;
+            image_url: string;
+            caption: string | null;
+            created_at: Date;
+            updated_at: Date;
+        }>;
+        moderation_history: Array<{
+            id: string;
+            previous_status: AccidentModerationStatus;
+            new_status: AccidentModerationStatus;
+            public_message: string | null;
+            internal_note: string | null;
+            created_at: Date;
+            moderated_by: { id: string; name: string; email: string };
+        }>;
+    },
+): ModerationAccident {
+    return {
+        ...toAccidentDetail(accident),
+        moderation_internal_note: accident.moderation_internal_note,
+        created_by: accident.created_by,
+        moderation_history: accident.moderation_history,
+    };
+}
+
+export async function getAccidentModerationSummary(): Promise<AccidentModerationSummary> {
+    const sourceFilter = { source: "APP" as const };
+    const [total, pending, approved, rejected] = await Promise.all([
+        prisma.accident.count({ where: sourceFilter }),
+        prisma.accident.count({
+            where: { ...sourceFilter, moderation_status: "PENDING" },
+        }),
+        prisma.accident.count({
+            where: { ...sourceFilter, moderation_status: "APPROVED" },
+        }),
+        prisma.accident.count({
+            where: { ...sourceFilter, moderation_status: "REJECTED" },
+        }),
+    ]);
+
+    return { total, pending, approved, rejected };
+}
+
+export async function listAccidentsForModeration(
+    query: AccidentListQuery = {},
+): Promise<AccidentModerationListResult> {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(50, Math.max(1, query.limit ?? 10));
+    const search = query.search?.trim();
+    const where = {
+        source: "APP" as const,
+        ...(query.status ? { moderation_status: query.status } : {}),
+        ...(query.severity ? { severity: query.severity } : {}),
+        ...(search
+            ? {
+                  OR: [
+                      {
+                          tipo_acidente: {
+                              contains: search,
+                              mode: "insensitive" as const,
+                          },
+                      },
+                      {
+                          description: {
+                              contains: search,
+                              mode: "insensitive" as const,
+                          },
+                      },
+                  ],
+              }
+            : {}),
+    };
+    const [total, accidents] = await prisma.$transaction([
+        prisma.accident.count({ where }),
+        prisma.accident.findMany({
+            where,
+            include: {
+                created_by: {
+                    select: { id: true, name: true, email: true },
+                },
+            },
+            orderBy: { created_at: query.sort === "oldest" ? "asc" : "desc" },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+    ]);
+
+    return {
+        data: accidents.map((accident): AccidentModerationListItem => ({
+            ...toAccident(accident),
+            created_by: accident.created_by,
+        })),
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+    };
+}
+
+export async function getAccidentForModeration(
+    accidentId: string,
+): Promise<ModerationAccident> {
+    const accident = await prisma.accident.findFirst({
+        where: { id: accidentId, source: "APP" },
+        include: moderationAccidentInclude,
+    });
+
+    if (!accident) {
+        throw new AppError("Accident not found", 404, "ACCIDENT_NOT_FOUND");
+    }
+
+    return toModerationAccident(accident);
+}
+
+export async function moderateAccident(
+    user: AuthUser,
+    accidentId: string,
+    input: ModerateAccidentBody,
+): Promise<ModerationAccident> {
+    const publicMessage = input.publicMessage?.trim() || null;
+    const internalNote = input.internalNote?.trim() || null;
+
+    if (input.status === "REJECTED" && !publicMessage) {
+        throw new AppError(
+            "A public rejection message is required",
+            400,
+            "MODERATION_MESSAGE_REQUIRED",
+        );
+    }
+
+    if (
+        (publicMessage?.length ?? 0) > 2000 ||
+        (internalNote?.length ?? 0) > 4000
+    ) {
+        throw new AppError(
+            "Moderation messages exceed the allowed length",
+            400,
+            "MODERATION_MESSAGE_TOO_LONG",
+        );
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        const currentAccident = await transaction.accident.findFirst({
+            where: { id: accidentId, source: "APP" },
+            select: { id: true, moderation_status: true },
+        });
+
+        if (!currentAccident) {
+            throw new AppError("Accident not found", 404, "ACCIDENT_NOT_FOUND");
+        }
+
+        if (currentAccident.moderation_status !== "PENDING") {
+            throw new AppError(
+                "Only pending accidents can be moderated",
+                409,
+                "ACCIDENT_ALREADY_MODERATED",
+            );
+        }
+
+        const updated = await transaction.accident.updateMany({
+            where: { id: accidentId, moderation_status: "PENDING" },
+            data: {
+                moderation_status: input.status,
+                moderation_message: publicMessage,
+                moderation_internal_note: internalNote,
+                moderated_at: new Date(),
+                moderated_by_id: user.id,
+            },
+        });
+
+        if (updated.count !== 1) {
+            throw new AppError(
+                "This accident was already moderated",
+                409,
+                "ACCIDENT_ALREADY_MODERATED",
+            );
+        }
+
+        await transaction.accidentModerationHistory.create({
+            data: {
+                accident_id: accidentId,
+                moderated_by_id: user.id,
+                previous_status: currentAccident.moderation_status,
+                new_status: input.status,
+                public_message: publicMessage,
+                internal_note: internalNote,
+            },
+        });
+
+        const accident = await transaction.accident.findFirstOrThrow({
+            where: { id: accidentId },
+            include: moderationAccidentInclude,
+        });
+
+        return toModerationAccident(accident);
+    });
 }
 
 export async function updateAccident(
@@ -455,6 +723,14 @@ export async function deleteAccident(
         throw new AppError("Accident not found", 404, "ACCIDENT_NOT_FOUND");
     }
 
+    if (currentAccident.moderation_status !== "PENDING") {
+        throw new AppError(
+            "Moderated accidents cannot be deleted",
+            409,
+            "ACCIDENT_MODERATED_CANNOT_DELETE",
+        );
+    }
+
     if (!canManageAccident(user, currentAccident.created_by_id)) {
         throw new AppError(
             "You cannot delete this accident",
@@ -468,9 +744,9 @@ export async function deleteAccident(
     });
 }
 
-async function ensureAccidentExists(accidentId: string) {
-    const accident = await prisma.accident.findUnique({
-        where: { id: accidentId },
+async function ensurePublicAccidentExists(accidentId: string) {
+    const accident = await prisma.accident.findFirst({
+        where: { id: accidentId, moderation_status: "APPROVED" },
         select: { id: true },
     });
 
@@ -490,7 +766,7 @@ function canManageUserContent(user: AuthUser, ownerId: string) {
 export async function listAccidentComments(
     accidentId: string,
 ): Promise<AccidentComment[]> {
-    await ensureAccidentExists(accidentId);
+    await ensurePublicAccidentExists(accidentId);
 
     const comments = await prisma.accidentComment.findMany({
         where: { accident_id: accidentId },
@@ -505,7 +781,7 @@ export async function createAccidentComment(
     accidentId: string,
     input: CreateAccidentCommentBody,
 ): Promise<AccidentComment> {
-    await ensureAccidentExists(accidentId);
+    await ensurePublicAccidentExists(accidentId);
 
     const comment = await prisma.accidentComment.create({
         data: {
@@ -548,7 +824,7 @@ export async function deleteAccidentComment(
 export async function listAccidentImages(
     accidentId: string,
 ): Promise<AccidentImage[]> {
-    await ensureAccidentExists(accidentId);
+    await ensurePublicAccidentExists(accidentId);
 
     const images = await prisma.accidentImage.findMany({
         where: { accident_id: accidentId },
@@ -563,7 +839,7 @@ export async function createAccidentImage(
     accidentId: string,
     input: CreateAccidentImageBody,
 ): Promise<AccidentImage> {
-    await ensureAccidentExists(accidentId);
+    await ensurePublicAccidentExists(accidentId);
 
     const uploadedImage = await uploadImageToCloudinary(
         input.fileBuffer,
