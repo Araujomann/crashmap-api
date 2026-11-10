@@ -115,6 +115,23 @@ test("moderation keeps app reports private until approved and audits decisions",
         );
         assert.equal(rejected.json().data.moderation_history.length, 1);
 
+        const myRejectedReports = await app.inject({
+            method: "GET",
+            url: "/users/me/reports?status=REJECTED",
+            headers,
+        });
+        assert.equal(myRejectedReports.statusCode, 200);
+        const myRejectedReport = myRejectedReports
+            .json()
+            .data.find(
+                (report: { id: string }) => report.id === pendingAccidentId,
+            );
+        assert.equal(
+            myRejectedReport.moderation_message,
+            "Não há informações suficientes para confirmar.",
+        );
+        assert.equal("moderation_internal_note" in myRejectedReport, false);
+
         const duplicateDecision = await app.inject({
             method: "PATCH",
             url: `/accidents/${pendingAccidentId}/moderation`,
@@ -191,6 +208,21 @@ test("moderation keeps app reports private until approved and audits decisions",
             ),
         );
 
+        const myApprovedReports = await app.inject({
+            method: "GET",
+            url: "/users/me/reports?status=APPROVED",
+            headers,
+        });
+        assert.equal(myApprovedReports.statusCode, 200);
+        assert.ok(
+            myApprovedReports
+                .json()
+                .data.some(
+                    (report: { id: string }) =>
+                        report.id === approvedAccidentId,
+                ),
+        );
+
         const map = await app.inject({
             method: "GET",
             url: "/accidents/map",
@@ -219,7 +251,7 @@ test("moderation keeps app reports private until approved and audits decisions",
 
         const missingAuth = await app.inject({
             method: "GET",
-            url: "/accidents/moderation/summary",
+            url: "/users/me/reports",
         });
         assert.equal(missingAuth.statusCode, 401);
     } finally {
