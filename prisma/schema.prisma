@@ -62,6 +62,7 @@ model User {
   accidents Accident[]
   moderated_accidents Accident[] @relation("AccidentModerator")
   accident_comments AccidentComment[]
+  accident_trust_votes AccidentTrustVote[]
   accident_images AccidentImage[]
   moderation_decisions AccidentModerationHistory[]
   push_tokens PushToken[]
@@ -122,6 +123,7 @@ model Accident {
   created_by User? @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
   moderated_by User? @relation("AccidentModerator", fields: [moderated_by_id], references: [id], onDelete: SetNull)
   comments AccidentComment[]
+  trust_votes AccidentTrustVote[]
   images AccidentImage[]
   moderation_history AccidentModerationHistory[]
 
@@ -162,6 +164,19 @@ model AccidentComment {
   @@index([accident_id])
   @@index([created_by_id])
   @@index([created_at])
+}
+
+model AccidentTrustVote {
+  id            String   @id @default(uuid())
+  accident_id   String
+  created_by_id String
+  created_at    DateTime @default(now())
+
+  accident   Accident @relation(fields: [accident_id], references: [id], onDelete: Cascade)
+  created_by User     @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
+
+  @@unique([accident_id, created_by_id])
+  @@index([created_by_id])
 }
 
 model AccidentImage {

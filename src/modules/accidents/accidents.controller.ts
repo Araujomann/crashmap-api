@@ -13,6 +13,7 @@ import {
     accidentModerationSummaryResponseSchema,
     accidentCreateResponseSchema,
     accidentResponseSchema,
+    accidentTrustResponseSchema,
     accidentsListResponseSchema,
     accidentsMapResponseSchema,
     createAccidentCommentBodySchema,
@@ -26,12 +27,14 @@ import {
 } from "./accidents.schema.js";
 import {
     createAccidentComment,
+    addAccidentTrust,
     createAccidentImage,
     createAccident,
     deleteAccidentComment,
     deleteAccidentImage,
     deleteAccident,
     getAccident,
+    getAccidentTrust,
     listAccidentComments,
     listAccidentImages,
     listAccidents,
@@ -40,6 +43,7 @@ import {
     listAccidentsForModeration,
     listAccidentsForMap,
     moderateAccident,
+    removeAccidentTrust,
     updateAccident,
 } from "./accidents.service.js";
 import { sendApprovedAccidentNotification } from "../notifications/notifications.service.js";
@@ -246,6 +250,72 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             const accident = await getAccident(request.params.id);
 
             return reply.code(200).send({ data: accident });
+        },
+    );
+
+    app.get<{ Params: { id: string } }>(
+        "/:id/trust",
+        {
+            preHandler: requireAuthenticatedUser,
+            schema: {
+                tags: ["Accidents"],
+                summary: "Consultar os votos de confiança de um acidente",
+                security: [{ bearerAuth: [] }],
+                params: accidentIdParamsSchema,
+                response: { 200: accidentTrustResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const trust = await getAccidentTrust(
+                request.authUser!.id,
+                request.params.id,
+            );
+
+            return reply.code(200).send({ data: trust });
+        },
+    );
+
+    app.post<{ Params: { id: string } }>(
+        "/:id/trust",
+        {
+            preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
+            schema: {
+                tags: ["Accidents"],
+                summary: "Marcar um acidente como confiável",
+                security: [{ bearerAuth: [] }],
+                params: accidentIdParamsSchema,
+                response: { 200: accidentTrustResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const trust = await addAccidentTrust(
+                request.authUser!.id,
+                request.params.id,
+            );
+
+            return reply.code(200).send({ data: trust });
+        },
+    );
+
+    app.delete<{ Params: { id: string } }>(
+        "/:id/trust",
+        {
+            preHandler: requireAuthenticatedUser,
+            schema: {
+                tags: ["Accidents"],
+                summary: "Retirar o voto de confiança de um acidente",
+                security: [{ bearerAuth: [] }],
+                params: accidentIdParamsSchema,
+                response: { 200: accidentTrustResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const trust = await removeAccidentTrust(
+                request.authUser!.id,
+                request.params.id,
+            );
+
+            return reply.code(200).send({ data: trust });
         },
     );
 

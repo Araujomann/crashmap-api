@@ -25,15 +25,26 @@ export async function getMe(userId: string): Promise<AuthUser> {
 export async function getMyGamificationStats(
     userId: string,
 ): Promise<UserGamificationStats> {
-    const approvedReportsCount = await prisma.accident.count({
-        where: {
-            created_by_id: userId,
-            source: "APP",
-            moderation_status: "APPROVED",
-        },
-    });
+    const [approvedReportsCount, receivedTrustVotesCount] =
+        await prisma.$transaction([
+            prisma.accident.count({
+                where: {
+                    created_by_id: userId,
+                    source: "APP",
+                    moderation_status: "APPROVED",
+                },
+            }),
+            prisma.accidentTrustVote.count({
+                where: {
+                    accident: { is: { created_by_id: userId } },
+                },
+            }),
+        ]);
 
-    return { approved_reports_count: approvedReportsCount };
+    return {
+        approved_reports_count: approvedReportsCount,
+        received_trust_votes_count: receivedTrustVotesCount,
+    };
 }
 
 export async function getMyReports(

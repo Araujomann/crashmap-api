@@ -28,6 +28,7 @@ export interface AccidentComment {
     id: string;
     accident_id: string;
     created_by_id: string;
+    author_name: string | null;
     body: string;
     created_at: Date;
     updated_at: Date;
@@ -44,8 +45,14 @@ export interface AccidentImage {
 }
 
 export interface AccidentDetail extends Accident {
+    trusted_count: number;
     comments: AccidentComment[];
     images: AccidentImage[];
+}
+
+export interface AccidentTrustSummary {
+    trusted_count: number;
+    trusted_by_me: boolean;
 }
 
 export interface AccidentModerationHistoryItem {

@@ -26,9 +26,13 @@ export const gamificationStatsResponseSchema = {
         data: {
             type: "object",
             additionalProperties: false,
-            required: ["approved_reports_count"],
+            required: [
+                "approved_reports_count",
+                "received_trust_votes_count",
+            ],
             properties: {
                 approved_reports_count: { type: "integer", minimum: 0 },
+                received_trust_votes_count: { type: "integer", minimum: 0 },
             },
         },
     },

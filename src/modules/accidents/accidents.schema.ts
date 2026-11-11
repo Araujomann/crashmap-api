@@ -62,6 +62,7 @@ export const accidentCommentSchema = {
         "id",
         "accident_id",
         "created_by_id",
+        "author_name",
         "body",
         "created_at",
         "updated_at",
@@ -70,6 +71,7 @@ export const accidentCommentSchema = {
         id: { type: "string" },
         accident_id: { type: "string" },
         created_by_id: { type: "string" },
+        author_name: { type: ["string", "null"] },
         body: { type: "string" },
         created_at: { type: "string", format: "date-time" },
         updated_at: { type: "string", format: "date-time" },
@@ -102,9 +104,15 @@ export const accidentImageSchema = {
 export const accidentDetailSchema = {
     type: "object",
     additionalProperties: false,
-    required: [...accidentSchema.required, "comments", "images"],
+    required: [
+        ...accidentSchema.required,
+        "trusted_count",
+        "comments",
+        "images",
+    ],
     properties: {
         ...accidentSchema.properties,
+        trusted_count: { type: "integer", minimum: 0 },
         comments: {
             type: "array",
             items: accidentCommentSchema,
@@ -396,6 +404,23 @@ export const accidentCommentsListResponseSchema = {
         data: {
             type: "array",
             items: accidentCommentSchema,
+        },
+    },
+} as const;
+
+export const accidentTrustResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["trusted_count", "trusted_by_me"],
+            properties: {
+                trusted_count: { type: "integer", minimum: 0 },
+                trusted_by_me: { type: "boolean" },
+            },
         },
     },
 } as const;

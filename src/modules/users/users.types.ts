@@ -6,6 +6,7 @@ export interface UpdateMeBody {
 
 export interface UserGamificationStats {
     approved_reports_count: number;
+    received_trust_votes_count: number;
 }
 
 export interface MyReportsQuery {

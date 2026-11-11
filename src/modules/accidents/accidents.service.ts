@@ -17,6 +17,7 @@ import type {
     AccidentModerationStatus,
     AccidentModerationSummary,
     AccidentSeverity,
+    AccidentTrustSummary,
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
@@ -67,6 +68,7 @@ function toAccidentComment(comment: {
     id: string;
     accident_id: string;
     created_by_id: string;
+    created_by?: { name: string };
     body: string;
     created_at: Date;
     updated_at: Date;
@@ -75,6 +77,7 @@ function toAccidentComment(comment: {
         id: comment.id,
         accident_id: comment.accident_id,
         created_by_id: comment.created_by_id,
+        author_name: comment.created_by?.name ?? null,
         body: comment.body,
         created_at: comment.created_at,
         updated_at: comment.updated_at,
@@ -118,10 +121,12 @@ function toAccidentDetail(accident: {
     created_by_id: string | null;
     created_at: Date;
     updated_at: Date;
+    _count?: { trust_votes: number };
     comments: Array<{
         id: string;
         accident_id: string;
         created_by_id: string;
+        created_by?: { name: string };
         body: string;
         created_at: Date;
         updated_at: Date;
@@ -138,6 +143,7 @@ function toAccidentDetail(accident: {
 }): AccidentDetail {
     return {
         ...toAccident(accident),
+        trusted_count: accident._count?.trust_votes ?? 0,
         comments: accident.comments.map(toAccidentComment),
         images: accident.images.map(toAccidentImage),
     };
@@ -376,16 +382,20 @@ export async function listAccidentsForMap(
     return { data, total: data.length };
 }
 
-export async function getAccident(accidentId: string): Promise<Accident> {
+export async function getAccident(
+    accidentId: string,
+): Promise<AccidentDetail> {
     const accident = await prisma.accident.findFirst({
         where: { id: accidentId, moderation_status: "APPROVED" },
         include: {
             comments: {
                 orderBy: { created_at: "asc" },
+                include: { created_by: { select: { name: true } } },
             },
             images: {
                 orderBy: { created_at: "asc" },
             },
+            _count: { select: { trust_votes: true } },
         },
     });
 
@@ -421,8 +431,12 @@ const moderationAccidentInclude = {
     created_by: {
         select: { id: true, name: true, email: true },
     },
-    comments: { orderBy: { created_at: "asc" as const } },
+    comments: {
+        orderBy: { created_at: "asc" as const },
+        include: { created_by: { select: { name: true } } },
+    },
     images: { orderBy: { created_at: "asc" as const } },
+    _count: { select: { trust_votes: true } },
     moderation_history: {
         orderBy: { created_at: "desc" as const },
         include: {
@@ -453,11 +467,13 @@ function toModerationAccident(
         created_by_id: string | null;
         created_at: Date;
         updated_at: Date;
+        _count?: { trust_votes: number };
         created_by: { id: string; name: string; email: string } | null;
         comments: Array<{
             id: string;
             accident_id: string;
             created_by_id: string;
+            created_by?: { name: string };
             body: string;
             created_at: Date;
             updated_at: Date;
@@ -771,6 +787,7 @@ export async function listAccidentComments(
     const comments = await prisma.accidentComment.findMany({
         where: { accident_id: accidentId },
         orderBy: { created_at: "asc" },
+        include: { created_by: { select: { name: true } } },
     });
 
     return comments.map(toAccidentComment);
@@ -789,9 +806,86 @@ export async function createAccidentComment(
             created_by_id: user.id,
             body: input.body.trim(),
         },
+        include: { created_by: { select: { name: true } } },
     });
 
     return toAccidentComment(comment);
+}
+
+export async function getAccidentTrust(
+    userId: string,
+    accidentId: string,
+): Promise<AccidentTrustSummary> {
+    await ensurePublicAccidentExists(accidentId);
+
+    const [trustedCount, vote] = await prisma.$transaction([
+        prisma.accidentTrustVote.count({
+            where: { accident_id: accidentId },
+        }),
+        prisma.accidentTrustVote.findUnique({
+            where: {
+                accident_id_created_by_id: {
+                    accident_id: accidentId,
+                    created_by_id: userId,
+                },
+            },
+            select: { id: true },
+        }),
+    ]);
+
+    return { trusted_count: trustedCount, trusted_by_me: Boolean(vote) };
+}
+
+async function ensureCanTrustAccident(accidentId: string, userId: string) {
+    const accident = await prisma.accident.findFirst({
+        where: { id: accidentId, moderation_status: "APPROVED" },
+        select: { created_by_id: true },
+    });
+
+    if (!accident) {
+        throw new AppError("Accident not found", 404, "ACCIDENT_NOT_FOUND");
+    }
+
+    if (!accident.created_by_id || accident.created_by_id === userId) {
+        throw new AppError(
+            "You cannot trust this accident",
+            403,
+            "ACCIDENT_TRUST_FORBIDDEN",
+        );
+    }
+}
+
+export async function addAccidentTrust(
+    userId: string,
+    accidentId: string,
+): Promise<AccidentTrustSummary> {
+    await ensureCanTrustAccident(accidentId, userId);
+
+    await prisma.accidentTrustVote.upsert({
+        where: {
+            accident_id_created_by_id: {
+                accident_id: accidentId,
+                created_by_id: userId,
+            },
+        },
+        create: { accident_id: accidentId, created_by_id: userId },
+        update: {},
+    });
+
+    return getAccidentTrust(userId, accidentId);
+}
+
+export async function removeAccidentTrust(
+    userId: string,
+    accidentId: string,
+): Promise<AccidentTrustSummary> {
+    await ensurePublicAccidentExists(accidentId);
+
+    await prisma.accidentTrustVote.deleteMany({
+        where: { accident_id: accidentId, created_by_id: userId },
+    });
+
+    return getAccidentTrust(userId, accidentId);
 }
 
 export async function deleteAccidentComment(
