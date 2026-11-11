@@ -65,6 +65,7 @@ model User {
   accident_trust_votes AccidentTrustVote[]
   accident_images AccidentImage[]
   moderation_decisions AccidentModerationHistory[]
+  administrative_notices AdministrativeNotice[]
   push_tokens PushToken[]
   refresh_tokens RefreshToken[]
   verification_tokens VerificationToken[]
@@ -81,6 +82,18 @@ model PushToken {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+}
+
+model AdministrativeNotice {
+  id            String   @id @default(uuid())
+  message       String
+  created_by_id String
+  created_at    DateTime @default(now())
+
+  created_by User @relation(fields: [created_by_id], references: [id], onDelete: Restrict)
+
+  @@index([created_at])
+  @@map("administrative_notices")
 }
 
 model VerificationToken {

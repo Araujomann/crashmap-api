@@ -37,7 +37,10 @@ export async function buildApp() {
             tags: [
                 { name: "Auth", description: "Endpoints de Autenticação" },
                 { name: "Users", description: "Endpoints de Usuários" },
-                { name: "Notifications", description: "Notificações push" },
+                {
+                    name: "Notifications",
+                    description: "Avisos administrativos e notificações push",
+                },
                 { name: "Accidents", description: "Endpoints de Acidentes" },
             ],
             components: {

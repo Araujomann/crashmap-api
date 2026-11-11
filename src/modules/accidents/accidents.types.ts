@@ -105,6 +105,11 @@ export interface ModerateAccidentBody {
     internalNote?: string;
 }
 
+export interface EditPendingAccidentBody {
+    tipo_acidente?: string;
+    description?: string | null;
+}
+
 export interface CreateAccidentBody {
     tipo_acidente: string;
     classificacao_acidente: AccidentClassification;

@@ -97,6 +97,27 @@ test("moderation keeps app reports private until approved and audits decisions",
                 ),
         );
 
+        const edited = await app.inject({
+            method: "PATCH",
+            url: `/accidents/moderation/${pendingAccidentId}`,
+            headers,
+            payload: {
+                tipo_acidente: `${marker}-corrigido`,
+                description: "Descrição revisada pela moderação.",
+            },
+        });
+        assert.equal(edited.statusCode, 200);
+        assert.equal(
+            edited.json().data.tipo_acidente,
+            `${marker}-corrigido`,
+        );
+        assert.equal(
+            edited.json().data.description,
+            "Descrição revisada pela moderação.",
+        );
+        assert.equal(edited.json().data.moderation_status, "PENDING");
+        assert.equal(edited.json().data.moderation_history.length, 0);
+
         const rejected = await app.inject({
             method: "PATCH",
             url: `/accidents/${pendingAccidentId}/moderation`,
@@ -114,6 +135,14 @@ test("moderation keeps app reports private until approved and audits decisions",
             "Conferir divergência com equipe local.",
         );
         assert.equal(rejected.json().data.moderation_history.length, 1);
+
+        const editAfterDecision = await app.inject({
+            method: "PATCH",
+            url: `/accidents/moderation/${pendingAccidentId}`,
+            headers,
+            payload: { description: "Edição após decisão." },
+        });
+        assert.equal(editAfterDecision.statusCode, 409);
 
         const myRejectedReports = await app.inject({
             method: "GET",

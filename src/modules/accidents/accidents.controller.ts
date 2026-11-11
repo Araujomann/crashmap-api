@@ -21,6 +21,7 @@ import {
     deletedAccidentResponseSchema,
     accidentCommentSchema,
     accidentImageSchema,
+    editPendingAccidentBodySchema,
     moderationAccidentResponseSchema,
     moderateAccidentBodySchema,
     updateAccidentBodySchema,
@@ -30,6 +31,7 @@ import {
     addAccidentTrust,
     createAccidentImage,
     createAccident,
+    editPendingAccident,
     deleteAccidentComment,
     deleteAccidentImage,
     deleteAccident,
@@ -53,6 +55,7 @@ import type {
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
+    EditPendingAccidentBody,
     ModerateAccidentBody,
     UpdateAccidentBody,
 } from "./accidents.types.js";
@@ -164,6 +167,36 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
         },
         async (request, reply) => {
             const accident = await getAccidentForModeration(request.params.id);
+
+            return reply.code(200).send({ data: accident });
+        },
+    );
+
+    app.patch<{
+        Params: { id: string };
+        Body: EditPendingAccidentBody;
+    }>(
+        "/moderation/:id",
+        {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
+            schema: {
+                tags: ["Accidents"],
+                summary: "Editar o texto de um relato pendente",
+                security: [{ bearerAuth: [] }],
+                params: accidentIdParamsSchema,
+                body: editPendingAccidentBodySchema,
+                response: { 200: moderationAccidentResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const accident = await editPendingAccident(
+                request.params.id,
+                request.body,
+            );
 
             return reply.code(200).send({ data: accident });
         },

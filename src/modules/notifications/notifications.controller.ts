@@ -1,9 +1,18 @@
 import type { FastifyPluginAsync } from "fastify";
-import { requireAuthenticatedUser } from "../auth/auth.guard.js";
+import {
+    requireAuthenticatedUser,
+    requireModerator,
+    requireVerifiedEmail,
+} from "../auth/auth.guard.js";
 import {
     registerPushToken,
     unregisterPushToken,
 } from "./notifications.service.js";
+import {
+    createAdministrativeNotice,
+    listAdministrativeNotices,
+    MAX_ADMINISTRATIVE_NOTICE_LENGTH,
+} from "./administrative-notices.service.js";
 
 interface RegisterPushTokenBody {
     token: string;
@@ -13,6 +22,55 @@ interface RegisterPushTokenBody {
 interface UnregisterPushTokenBody {
     token: string;
 }
+
+interface AdministrativeNoticeBody {
+    message: string;
+}
+
+const administrativeNoticeSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["id", "message", "created_at"],
+    properties: {
+        id: { type: "string" },
+        message: { type: "string" },
+        created_at: { type: "string", format: "date-time" },
+    },
+} as const;
+
+const administrativeNoticesResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "array",
+            items: administrativeNoticeSchema,
+        },
+    },
+} as const;
+
+const administrativeNoticeResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: administrativeNoticeSchema,
+    },
+} as const;
+
+const administrativeNoticeBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["message"],
+    properties: {
+        message: {
+            type: "string",
+            minLength: 1,
+            maxLength: MAX_ADMINISTRATIVE_NOTICE_LENGTH,
+        },
+    },
+} as const;
 
 const registerPushTokenBodySchema = {
     type: "object",
@@ -34,6 +92,50 @@ const unregisterPushTokenBodySchema = {
 } as const;
 
 export const notificationsRoutes: FastifyPluginAsync = async (app) => {
+    app.get(
+        "/administrative-notices",
+        {
+            preHandler: requireAuthenticatedUser,
+            schema: {
+                tags: ["Notifications"],
+                summary: "Listar avisos administrativos da comunidade",
+                security: [{ bearerAuth: [] }],
+                response: { 200: administrativeNoticesResponseSchema },
+            },
+        },
+        async (_, reply) => {
+            const notices = await listAdministrativeNotices();
+
+            return reply.code(200).send({ data: notices });
+        },
+    );
+
+    app.post<{ Body: AdministrativeNoticeBody }>(
+        "/administrative-notices",
+        {
+            preHandler: [
+                requireAuthenticatedUser,
+                requireVerifiedEmail,
+                requireModerator,
+            ],
+            schema: {
+                tags: ["Notifications"],
+                summary: "Publicar um aviso para a comunidade",
+                security: [{ bearerAuth: [] }],
+                body: administrativeNoticeBodySchema,
+                response: { 201: administrativeNoticeResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            const notice = await createAdministrativeNotice(
+                request.body.message,
+                request.authUser!.id,
+            );
+
+            return reply.code(201).send({ data: notice });
+        },
+    );
+
     app.put<{ Body: RegisterPushTokenBody }>(
         "/push-token",
         {

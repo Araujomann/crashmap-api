@@ -371,6 +371,16 @@ export const moderateAccidentBodySchema = {
     },
 } as const;
 
+export const editPendingAccidentBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    minProperties: 1,
+    properties: {
+        tipo_acidente: { type: "string", minLength: 3, maxLength: 180 },
+        description: { type: ["string", "null"], maxLength: 4000 },
+    },
+} as const;
+
 export const accidentResponseSchema = {
     type: "object",
     additionalProperties: false,

@@ -21,6 +21,7 @@ import type {
     CreateAccidentCommentBody,
     CreateAccidentImageBody,
     CreateAccidentBody,
+    EditPendingAccidentBody,
     ModerateAccidentBody,
     ModerationAccident,
     UpdateAccidentBody,
@@ -595,6 +596,71 @@ export async function getAccidentForModeration(
     }
 
     return toModerationAccident(accident);
+}
+
+export async function editPendingAccident(
+    accidentId: string,
+    input: EditPendingAccidentBody,
+): Promise<ModerationAccident> {
+    const tipoAcidente = input.tipo_acidente?.trim();
+    const description =
+        input.description === undefined
+            ? undefined
+            : input.description?.trim() || null;
+
+    if (tipoAcidente !== undefined && tipoAcidente.length < 3) {
+        throw new AppError(
+            "Accident title must contain at least 3 characters",
+            400,
+            "INVALID_ACCIDENT_TITLE",
+        );
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        const currentAccident = await transaction.accident.findFirst({
+            where: { id: accidentId, source: "APP" },
+            select: { id: true, moderation_status: true },
+        });
+
+        if (!currentAccident) {
+            throw new AppError("Accident not found", 404, "ACCIDENT_NOT_FOUND");
+        }
+
+        if (currentAccident.moderation_status !== "PENDING") {
+            throw new AppError(
+                "Only pending accidents can be edited",
+                409,
+                "ACCIDENT_ALREADY_MODERATED",
+            );
+        }
+
+        const updated = await transaction.accident.updateMany({
+            where: {
+                id: accidentId,
+                source: "APP",
+                moderation_status: "PENDING",
+            },
+            data: {
+                tipo_acidente: tipoAcidente,
+                description,
+            },
+        });
+
+        if (updated.count !== 1) {
+            throw new AppError(
+                "This accident was already moderated",
+                409,
+                "ACCIDENT_ALREADY_MODERATED",
+            );
+        }
+
+        const accident = await transaction.accident.findFirstOrThrow({
+            where: { id: accidentId },
+            include: moderationAccidentInclude,
+        });
+
+        return toModerationAccident(accident);
+    });
 }
 
 export async function moderateAccident(
