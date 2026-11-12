@@ -55,6 +55,7 @@ model User {
   password_hash String?
   google_id String? 
   is_email_verified Boolean @default(false)
+  email_verified_at DateTime?
   role role @default(user)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

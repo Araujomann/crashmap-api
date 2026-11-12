@@ -66,6 +66,7 @@ export const env = {
     REFRESH_TOKEN_SECRET: readRequiredEnv("REFRESH_TOKEN_SECRET"),
     ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
     REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
+    FRONTEND_URL: process.env.FRONTEND_URL?.trim() || "http://localhost:19006",
     SMTP_USER: process.env.SMTP_USER?.trim() ?? "",
     SMTP_PASS: process.env.SMTP_PASS?.replace(/\s/g, "") ?? "",
     SMTP_FROM:

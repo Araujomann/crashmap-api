@@ -11,7 +11,9 @@ import {
     resetPasswordBodySchema,
     simpleMessageResponseSchema,
     verifyEmailBodySchema,
+    verifyEmailQuerySchema,
     verifyPasswordResetCodeBodySchema,
+    resendVerificationBodySchema,
 } from "./auth.schema.js";
 import {
     loginUser,
@@ -23,6 +25,7 @@ import {
     verifyEmail,
     verifyPasswordResetCode,
 } from "./auth.service.js";
+import { resendVerificationEmail } from "./resend-verification-email.js";
 import { requireAuthenticatedUser } from "./auth.guard.js";
 import type {
     LoginBody,
@@ -124,7 +127,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         {
             schema: {
                 tags: ['Auth'],
-                summary: 'Verifica e-mail do usuário via token',
+                summary: 'Verifica e-mail do usuário via token (POST)',
                 body: verifyEmailBodySchema,
                 response: {
                     200: simpleMessageResponseSchema,
@@ -135,6 +138,48 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             await verifyEmail(request.body.token);
 
             return reply.code(200).send({ data: { message: "Email successfully verified!" } });
+        },
+    );
+
+    app.get<{ Querystring: { token: string } }>(
+        "/verify-email",
+        {
+            schema: {
+                tags: ['Auth'],
+                summary: 'Verifica e-mail do usuário via token (GET para navegador)',
+                querystring: verifyEmailQuerySchema,
+                response: {
+                    200: simpleMessageResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            await verifyEmail(request.query.token);
+
+            return reply.code(200).send({ data: { message: "Email successfully verified!" } });
+        },
+    );
+
+    app.post<{ Body: { email: string } }>(
+        "/resend-verification",
+        {
+            schema: {
+                tags: ['Auth'],
+                summary: 'Reenvia e-mail de verificação',
+                body: resendVerificationBodySchema,
+                response: {
+                    200: simpleMessageResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            await resendVerificationEmail(request.body.email, reply.log);
+
+            return reply.code(200).send({
+                data: {
+                    message: "Se houver uma conta associada a este e-mail que ainda não foi verificada, enviaremos um novo e-mail de verificação.",
+                },
+            });
         },
     );
 

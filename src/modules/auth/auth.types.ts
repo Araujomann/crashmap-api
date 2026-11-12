@@ -15,6 +15,7 @@ export interface AuthUser {
     email: string;
     role: UserRole;
     is_email_verified: boolean;
+    email_verified_at: Date | null;
     created_at: Date;
     updated_at: Date;
 }
