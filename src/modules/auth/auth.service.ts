@@ -12,7 +12,6 @@ import { env } from "../../shared/config/env.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { buildPasswordResetEmail } from "./password-reset-email.js";
-import { buildVerificationEmail } from "./verification-email.js";
 import type {
     AccessTokenPayload,
     AuthResponse,
@@ -174,7 +173,6 @@ export function signAccessToken(payload: TokenPayload): string {
         iat: issuedAt,
         exp: issuedAt + expiresIn,
     });
-}
     const unsignedToken = `${header}.${body}`;
     const signature = createHmac("sha256", env.ACCESS_TOKEN_SECRET)
         .update(unsignedToken)
@@ -274,7 +272,6 @@ async function storeRefreshToken(userId: string, refreshToken: string) {
         },
     });
 }
-}
 
 function ensurePasswordUser(passwordHash: string | null): string {
     if (!passwordHash) {
@@ -293,7 +290,6 @@ export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
     const existingUser = await prisma.user.findUnique({
         where: { email: normalizedEmail },
     });
-}
 
     if (existingUser) {
         throw new AuthError(
@@ -310,7 +306,6 @@ export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
             password_hash: hashPassword(input.password),
         },
     });
-}
 
     const verificationToken = randomBytes(32).toString("hex");
     await prisma.verificationToken.create({
@@ -320,40 +315,11 @@ export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
             expires_at: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
         },
     });
-}
 
-    // Envia e-mail de verificação via Nodemailer
-    if (env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM) {
-        const verificationLink = `${env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-        const verificationEmail = buildVerificationEmail(user.name, verificationLink);
-
-        const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465,
-            secure: true,
-            auth: {
-                user: env.SMTP_USER,
-                pass: env.SMTP_PASS,
-            },
-        });
-}
-
-        try {
-            await transporter.sendMail({
-                from: env.SMTP_FROM,
-                to: user.email,
-                subject: verificationEmail.subject,
-                text: verificationEmail.text,
-                html: verificationEmail.html,
-            });
-}
-        } catch (error) {
-            // Log error but don't fail registration
-            console.error("Failed to send verification email:", error);
-        } finally {
-            transporter.close();
-        }
-    }
+    // TODO: Configurar serviço real de envio de e-mail (Resend, SES) direcionando ao Frontend
+    console.log(
+        `\n[MOCK EMAIL] Enviar e-mail para: ${user.email}\nLink Frontend: http://localhost:5173/verificar-email?token=${verificationToken}\n`,
+    );
 
     const tokens = buildTokens(user);
     await storeRefreshToken(user.id, tokens.refreshToken);
@@ -379,7 +345,6 @@ export async function requestPasswordReset(
     const user = await prisma.user.findUnique({
         where: { email: email.trim().toLowerCase() },
     });
-}
 
     if (!user) {
         return;
@@ -391,7 +356,6 @@ export async function requestPasswordReset(
     const currentRecord = await prisma.passwordResetToken.findUnique({
         where: { user_id: user.id },
     });
-}
 
     if (currentRecord) {
         const requestWindowExpired =
@@ -428,7 +392,6 @@ export async function requestPasswordReset(
                 authorization_expires_at: null,
             },
         });
-}
 
         if (updated.count !== 1) {
             return;
@@ -447,7 +410,6 @@ export async function requestPasswordReset(
                     request_window_started_at: now,
                 },
             });
-}
         } catch (error) {
             if (
                 typeof error === "object" &&
@@ -471,7 +433,6 @@ export async function requestPasswordReset(
             pass: env.SMTP_PASS,
         },
     });
-}
     const emailContent = buildPasswordResetEmail(user.name, code);
 
     try {
@@ -482,7 +443,6 @@ export async function requestPasswordReset(
             text: emailContent.text,
             html: emailContent.html,
         });
-}
     } catch (error) {
         await prisma.passwordResetToken.updateMany({
             where: {
@@ -495,7 +455,6 @@ export async function requestPasswordReset(
                 attempts: PASSWORD_RESET_MAX_ATTEMPTS,
             },
         });
-}
         logger.error(
             { err: error, userId: user.id },
             "Password reset email delivery failed",
@@ -511,7 +470,6 @@ export async function verifyPasswordResetCode(
     const user = await prisma.user.findUnique({
         where: { email: input.email.trim().toLowerCase() },
     });
-}
 
     if (!user) {
         throw new AuthError(
@@ -524,7 +482,6 @@ export async function verifyPasswordResetCode(
     const record = await prisma.passwordResetToken.findUnique({
         where: { user_id: user.id },
     });
-}
     const now = new Date();
 
     if (
@@ -548,7 +505,6 @@ export async function verifyPasswordResetCode(
         },
         data: { attempts: { increment: 1 } },
     });
-}
 
     if (attempted.count !== 1) {
         throw new AuthError(
@@ -589,7 +545,6 @@ export async function verifyPasswordResetCode(
             ),
         },
     });
-}
 
     if (verified.count !== 1) {
         throw new AuthError(
@@ -611,7 +566,6 @@ export async function resetPassword(input: ResetPasswordBody): Promise<void> {
     const record = await prisma.passwordResetToken.findUnique({
         where: { authorization_hash: tokenHash },
     });
-}
 
     if (
         !record ||
@@ -638,7 +592,6 @@ export async function resetPassword(input: ResetPasswordBody): Promise<void> {
                 authorization_expires_at: null,
             },
         });
-}
 
         if (consumed.count !== 1) {
             throw new AuthError(
@@ -652,14 +605,11 @@ export async function resetPassword(input: ResetPasswordBody): Promise<void> {
             where: { id: record.user_id },
             data: { password_hash: passwordHash },
         });
-}
         await transaction.refreshToken.updateMany({
             where: { user_id: record.user_id, revoked_at: null },
             data: { revoked_at: now },
         });
-}
     });
-}
 }
 
 export async function loginUser(input: LoginBody): Promise<AuthResponse> {
@@ -667,7 +617,6 @@ export async function loginUser(input: LoginBody): Promise<AuthResponse> {
     const user = await prisma.user.findUnique({
         where: { email: normalizedEmail },
     });
-}
 
     if (!user) {
         throw new AuthError(
@@ -705,7 +654,6 @@ export async function refreshSession(
         where: { token_hash: refreshTokenHash },
         include: { user: true },
     });
-}
 
     if (
         !tokenRecord ||
@@ -749,7 +697,6 @@ export async function verifyEmail(token: string): Promise<void> {
     const record = await prisma.verificationToken.findUnique({
         where: { token },
     });
-}
 
     if (!record || record.expires_at < new Date()) {
         throw new AuthError(
@@ -761,19 +708,13 @@ export async function verifyEmail(token: string): Promise<void> {
 
     await prisma.user.update({
         where: { id: record.user_id },
-        data: { 
-            is_email_verified: true,
-            email_verified_at: new Date(),
-        },
+        data: { is_email_verified: true },
     });
-}
 
     await prisma.verificationToken.delete({
         where: { id: record.id },
     });
 }
-
-export { resendVerificationEmail } from "./resend-verification-email.js";
 
 export async function logoutUser(input: LogoutBody): Promise<void> {
     const refreshTokenHash = hashRefreshToken(input.refreshToken);
@@ -787,5 +728,4 @@ export async function logoutUser(input: LogoutBody): Promise<void> {
             revoked_at: new Date(),
         },
     });
-}
 }
