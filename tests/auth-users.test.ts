@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../src/app.js";
+import { hashPasswordResetCode } from "../src/modules/auth/auth.service.js";
 import { prisma } from "../src/shared/database/prisma.js";
 
 test("auth flow supports register, login, refresh, and logout", async () => {
@@ -87,6 +88,168 @@ test("auth flow supports register, login, refresh, and logout", async () => {
             await prisma.refreshToken.deleteMany({
                 where: { user_id: userId },
             });
+            await prisma.user.deleteMany({ where: { id: userId } });
+        }
+
+        await app.close();
+    }
+});
+
+test("password reset updates the password and invalidates its token and sessions", async () => {
+    const app = await buildApp();
+    await app.ready();
+
+    const uniqueSuffix = `${Date.now()}`;
+    const email = `password-reset-${uniqueSuffix}@example.com`;
+    const oldPassword = "OldTest123!";
+    const newPassword = "NewTest456!";
+    const resetCode = "012345";
+    let userId: string | undefined;
+
+    try {
+        const registerResponse = await app.inject({
+            method: "POST",
+            url: "/auth/register",
+            payload: {
+                name: `Password Reset ${uniqueSuffix}`,
+                email,
+                password: oldPassword,
+            },
+        });
+        assert.equal(registerResponse.statusCode, 201);
+
+        const registered = registerResponse.json().data;
+        userId = registered.user.id as string;
+        const refreshToken = registered.tokens.refreshToken as string;
+        await prisma.passwordResetToken.create({
+            data: {
+                user_id: userId,
+                token_hash: hashPasswordResetCode(userId, resetCode),
+                expires_at: new Date(Date.now() + 5 * 60 * 1000),
+            },
+        });
+
+        const invalidCodeResponse = await app.inject({
+            method: "POST",
+            url: "/auth/verify-password-reset-code",
+            payload: { email, code: "999999" },
+        });
+        assert.equal(invalidCodeResponse.statusCode, 400);
+        assert.equal(
+            invalidCodeResponse.json().error.code,
+            "AUTH_INVALID_PASSWORD_RESET_CODE",
+        );
+
+        const verifyResponse = await app.inject({
+            method: "POST",
+            url: "/auth/verify-password-reset-code",
+            payload: { email, code: resetCode },
+        });
+        assert.equal(verifyResponse.statusCode, 200);
+        const authorizationToken = verifyResponse.json().data
+            .authorizationToken as string;
+
+        const resetResponse = await app.inject({
+            method: "POST",
+            url: "/auth/reset-password",
+            payload: { authorizationToken, newPassword },
+        });
+        assert.equal(resetResponse.statusCode, 200);
+
+        const reusedAuthorizationResponse = await app.inject({
+            method: "POST",
+            url: "/auth/reset-password",
+            payload: { authorizationToken, newPassword: oldPassword },
+        });
+        assert.equal(reusedAuthorizationResponse.statusCode, 400);
+        assert.equal(
+            reusedAuthorizationResponse.json().error.code,
+            "AUTH_INVALID_PASSWORD_RESET_AUTHORIZATION",
+        );
+
+        const oldLoginResponse = await app.inject({
+            method: "POST",
+            url: "/auth/login",
+            payload: { email, password: oldPassword },
+        });
+        assert.equal(oldLoginResponse.statusCode, 401);
+
+        const newLoginResponse = await app.inject({
+            method: "POST",
+            url: "/auth/login",
+            payload: { email, password: newPassword },
+        });
+        assert.equal(newLoginResponse.statusCode, 200);
+
+        const revokedRefreshResponse = await app.inject({
+            method: "POST",
+            url: "/auth/refresh",
+            payload: { refreshToken },
+        });
+        assert.equal(revokedRefreshResponse.statusCode, 401);
+    } finally {
+        if (userId) {
+            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.passwordResetToken.deleteMany({ where: { user_id: userId } });
+            await prisma.user.deleteMany({ where: { id: userId } });
+        }
+
+        await app.close();
+    }
+});
+
+test("password reset codes stop working after five failed attempts", async () => {
+    const app = await buildApp();
+    await app.ready();
+
+    const uniqueSuffix = `${Date.now()}`;
+    const email = `password-reset-limit-${uniqueSuffix}@example.com`;
+    const code = "654321";
+    let userId: string | undefined;
+
+    try {
+        const registerResponse = await app.inject({
+            method: "POST",
+            url: "/auth/register",
+            payload: {
+                name: `Password Reset Limit ${uniqueSuffix}`,
+                email,
+                password: "OldTest123!",
+            },
+        });
+        assert.equal(registerResponse.statusCode, 201);
+        userId = registerResponse.json().data.user.id as string;
+
+        await prisma.passwordResetToken.create({
+            data: {
+                user_id: userId,
+                token_hash: hashPasswordResetCode(userId, code),
+                expires_at: new Date(Date.now() + 5 * 60 * 1000),
+                attempts: 4,
+            },
+        });
+
+        const fifthAttempt = await app.inject({
+            method: "POST",
+            url: "/auth/verify-password-reset-code",
+            payload: { email, code: "111111" },
+        });
+        assert.equal(fifthAttempt.statusCode, 400);
+
+        const attemptAfterLimit = await app.inject({
+            method: "POST",
+            url: "/auth/verify-password-reset-code",
+            payload: { email, code },
+        });
+        assert.equal(attemptAfterLimit.statusCode, 400);
+        assert.equal(
+            attemptAfterLimit.json().error.code,
+            "AUTH_INVALID_PASSWORD_RESET_CODE",
+        );
+    } finally {
+        if (userId) {
+            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.passwordResetToken.deleteMany({ where: { user_id: userId } });
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 

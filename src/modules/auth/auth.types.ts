@@ -42,6 +42,20 @@ export interface VerifyEmailBody {
     token: string;
 }
 
+export interface ForgotPasswordBody {
+    email: string;
+}
+
+export interface VerifyPasswordResetCodeBody {
+    email: string;
+    code: string;
+}
+
+export interface ResetPasswordBody {
+    authorizationToken: string;
+    newPassword: string;
+}
+
 export type RegisterResponse = AuthResponse;
 
 export interface AuthTokens {

@@ -66,6 +66,10 @@ export const env = {
     REFRESH_TOKEN_SECRET: readRequiredEnv("REFRESH_TOKEN_SECRET"),
     ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
     REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
+    SMTP_USER: process.env.SMTP_USER?.trim() ?? "",
+    SMTP_PASS: process.env.SMTP_PASS?.replace(/\s/g, "") ?? "",
+    SMTP_FROM:
+        process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || "",
     CLOUDINARY_CLOUD_NAME: cloudinaryConfig.CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY: cloudinaryConfig.CLOUDINARY_API_KEY,
     CLOUDINARY_API_SECRET: cloudinaryConfig.CLOUDINARY_API_SECRET,

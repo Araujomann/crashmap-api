@@ -18,6 +18,40 @@ export const verifyEmailBodySchema = {
     },
 } as const;
 
+export const forgotPasswordBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["email"],
+    properties: {
+        email: { type: "string", format: "email", maxLength: 255 },
+    },
+} as const;
+
+export const resetPasswordBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["authorizationToken", "newPassword"],
+    properties: {
+        authorizationToken: {
+            type: "string",
+            minLength: 64,
+            maxLength: 64,
+            pattern: "^[a-f0-9]{64}$",
+        },
+        newPassword: { type: "string", minLength: 8, maxLength: 128 },
+    },
+} as const;
+
+export const verifyPasswordResetCodeBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["email", "code"],
+    properties: {
+        email: { type: "string", format: "email", maxLength: 255 },
+        code: { type: "string", pattern: "^\\d{6}$" },
+    },
+} as const;
+
 
 export const simpleMessageResponseSchema = {
     type: "object",
@@ -30,6 +64,22 @@ export const simpleMessageResponseSchema = {
             required: ["message"],
             properties: {
                 message: { type: "string" },
+            },
+        },
+    },
+} as const;
+
+export const passwordResetAuthorizationResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["authorizationToken"],
+            properties: {
+                authorizationToken: { type: "string" },
             },
         },
     },

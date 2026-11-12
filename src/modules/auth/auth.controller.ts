@@ -1,32 +1,105 @@
 import type { FastifyPluginAsync } from "fastify";
 import {
     authResponseSchema,
+    forgotPasswordBodySchema,
     loginBodySchema,
     logoutResponseSchema,
     meResponseSchema,
+    passwordResetAuthorizationResponseSchema,
     refreshBodySchema,
     registerBodySchema,
-    
+    resetPasswordBodySchema,
     simpleMessageResponseSchema,
     verifyEmailBodySchema,
+    verifyPasswordResetCodeBodySchema,
 } from "./auth.schema.js";
 import {
     loginUser,
     logoutUser,
+    requestPasswordReset,
     refreshSession,
     registerUser,
+    resetPassword,
     verifyEmail,
+    verifyPasswordResetCode,
 } from "./auth.service.js";
 import { requireAuthenticatedUser } from "./auth.guard.js";
 import type {
     LoginBody,
+    ForgotPasswordBody,
     LogoutBody,
     RefreshBody,
     RegisterBody,
+    ResetPasswordBody,
     VerifyEmailBody,
+    VerifyPasswordResetCodeBody,
 } from "./auth.types.js";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
+    app.post<{ Body: ForgotPasswordBody }>(
+        "/forgot-password",
+        {
+            schema: {
+                tags: ["Auth"],
+                summary: "Solicita um código para redefinir a senha",
+                body: forgotPasswordBodySchema,
+                response: { 200: simpleMessageResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            await requestPasswordReset(request.body.email, request.log);
+
+            return reply.code(200).send({
+                data: {
+                    message:
+                        "Se houver uma conta associada a este e-mail, enviaremos um código de recuperação.",
+                },
+            });
+        },
+    );
+
+    app.post<{ Body: VerifyPasswordResetCodeBody }>(
+        "/verify-password-reset-code",
+        {
+            schema: {
+                tags: ["Auth"],
+                summary: "Valida o código de recuperação de senha",
+                body: verifyPasswordResetCodeBodySchema,
+                response: {
+                    200: passwordResetAuthorizationResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            const authorizationToken = await verifyPasswordResetCode(
+                request.body,
+            );
+
+            return reply.code(200).send({
+                data: { authorizationToken },
+            });
+        },
+    );
+
+    app.post<{ Body: ResetPasswordBody }>(
+        "/reset-password",
+        {
+            schema: {
+                tags: ["Auth"],
+                summary: "Redefine a senha usando uma autorização válida",
+                body: resetPasswordBodySchema,
+                response: { 200: simpleMessageResponseSchema },
+            },
+        },
+        async (request, reply) => {
+            await resetPassword(request.body);
+
+            return reply.code(200).send({
+                data: { message: "Senha redefinida com sucesso." },
+            });
+        },
+    );
+
     app.post<{ Body: RegisterBody }>(
         "/register",
         {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../src/app.js";
+import { env } from "../src/shared/config/env.js";
 import { prisma } from "../src/shared/database/prisma.js";
 
 test("register rejects duplicate emails", async () => {
@@ -102,6 +103,35 @@ test("login rejects invalid credentials", async () => {
             await prisma.user.deleteMany({ where: { id: userId } });
         }
 
+        await app.close();
+    }
+});
+
+test("password reset requests use the same response for unknown addresses", async () => {
+    const app = await buildApp();
+    await app.ready();
+
+    try {
+        const response = await app.inject({
+            method: "POST",
+            url: "/auth/forgot-password",
+            payload: { email: `missing-${Date.now()}@example.com` },
+        });
+
+        if (!env.SMTP_USER || !env.SMTP_PASS || !env.SMTP_FROM) {
+            assert.equal(response.statusCode, 503);
+            assert.equal(
+                response.json().error.code,
+                "AUTH_PASSWORD_RESET_UNAVAILABLE",
+            );
+        } else {
+            assert.equal(response.statusCode, 200);
+            assert.match(
+                response.json().data.message,
+                /Se houver uma conta associada a este e-mail/,
+            );
+        }
+    } finally {
         await app.close();
     }
 });

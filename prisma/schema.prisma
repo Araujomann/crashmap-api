@@ -69,6 +69,7 @@ model User {
   push_tokens PushToken[]
   refresh_tokens RefreshToken[]
   verification_tokens VerificationToken[]
+  password_reset_tokens PasswordResetToken[]
 }
 
 model PushToken {
@@ -107,6 +108,25 @@ model VerificationToken {
 
   @@index([user_id])
   @@index([token])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  token_hash String?  @unique
+  user_id    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+  attempts   Int      @default(0)
+  request_count Int   @default(1)
+  request_window_started_at DateTime @default(now())
+  authorization_hash String? @unique
+  authorization_expires_at DateTime?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id])
+  @@index([expires_at])
+  @@index([authorization_expires_at])
 }
 
 model Accident {
