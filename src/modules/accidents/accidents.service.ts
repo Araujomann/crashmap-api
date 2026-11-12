@@ -16,6 +16,7 @@ import type {
     AccidentModerationListResult,
     AccidentModerationStatus,
     AccidentModerationSummary,
+    AccidentOverview,
     AccidentSeverity,
     AccidentTrustSummary,
     CreateAccidentCommentBody,
@@ -279,6 +280,12 @@ export async function listAccidents(
 }
 
 const MAP_MAX_RESULTS = 5000;
+const ACCIDENT_OVERVIEW_TIME_ZONE = "America/Sao_Paulo";
+const accidentOverviewHourFormatter = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    timeZone: ACCIDENT_OVERVIEW_TIME_ZONE,
+});
 
 export async function listAccidentsForMap(
     query: AccidentMapQuery = {},
@@ -381,6 +388,106 @@ export async function listAccidentsForMap(
     }));
 
     return { data, total: data.length };
+}
+
+export async function getAccidentOverview(
+    now = new Date(),
+): Promise<AccidentOverview> {
+    const currentPeriodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const previousPeriodStart = new Date(
+        now.getTime() - 60 * 24 * 60 * 60 * 1000,
+    );
+    const approvedFilter = { moderation_status: "APPROVED" as const };
+
+    const [
+        approvedCount,
+        victimCounts,
+        severityCounts,
+        currentPeriodCount,
+        previousPeriodCount,
+        hourlyCounts,
+        recentAccidents,
+    ] = await Promise.all([
+        prisma.accident.count({ where: approvedFilter }),
+        prisma.accident.count({
+            where: {
+                ...approvedFilter,
+                classificacao_acidente: "com_vitima",
+            },
+        }),
+        prisma.accident.groupBy({
+            by: ["severity"],
+            where: approvedFilter,
+            _count: { _all: true },
+        }),
+        prisma.accident.count({
+            where: {
+                ...approvedFilter,
+                occurred_at: { gte: currentPeriodStart, lte: now },
+            },
+        }),
+        prisma.accident.count({
+            where: {
+                ...approvedFilter,
+                occurred_at: {
+                    gte: previousPeriodStart,
+                    lt: currentPeriodStart,
+                },
+            },
+        }),
+        prisma.accident.findMany({
+            where: {
+                ...approvedFilter,
+                occurred_at: { gte: currentPeriodStart, lte: now },
+            },
+            select: { occurred_at: true },
+        }),
+        prisma.accident.findMany({
+            where: approvedFilter,
+            select: {
+                id: true,
+                tipo_acidente: true,
+                classificacao_acidente: true,
+                occurred_at: true,
+                severity: true,
+                source: true,
+            },
+            orderBy: { occurred_at: "desc" },
+            take: 5,
+        }),
+    ]);
+
+    const severityDistribution: Record<AccidentSeverity, number> = {
+        low: 0,
+        medium: 0,
+        high: 0,
+        critical: 0,
+    };
+
+    for (const item of severityCounts) {
+        severityDistribution[item.severity] = item._count._all;
+    }
+
+    const timeOfDayCounts = Array.from({ length: 8 }, () => 0);
+    for (const accident of hourlyCounts) {
+        const hour = Number(accidentOverviewHourFormatter.format(accident.occurred_at));
+        timeOfDayCounts[Math.floor(hour / 3)] += 1;
+    }
+
+    return {
+        approved_accidents_count: approvedCount,
+        accidents_with_victims_count: victimCounts,
+        high_severity_accidents_count:
+            severityDistribution.high + severityDistribution.critical,
+        current_30_days_count: currentPeriodCount,
+        previous_30_days_count: previousPeriodCount,
+        severity_distribution: severityDistribution,
+        time_of_day: timeOfDayCounts.map((count, index) => ({
+            start_hour: index * 3,
+            count,
+        })),
+        recent_accidents: recentAccidents,
+    };
 }
 
 export async function getAccident(

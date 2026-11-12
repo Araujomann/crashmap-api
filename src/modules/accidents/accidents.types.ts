@@ -99,6 +99,30 @@ export interface AccidentModerationSummary {
     rejected: number;
 }
 
+export interface AccidentOverview {
+    approved_accidents_count: number;
+    accidents_with_victims_count: number;
+    high_severity_accidents_count: number;
+    current_30_days_count: number;
+    previous_30_days_count: number;
+    severity_distribution: Record<AccidentSeverity, number>;
+    time_of_day: Array<{
+        start_hour: number;
+        count: number;
+    }>;
+    recent_accidents: Array<
+        Pick<
+            Accident,
+            | "id"
+            | "tipo_acidente"
+            | "classificacao_acidente"
+            | "occurred_at"
+            | "severity"
+            | "source"
+        >
+    >;
+}
+
 export interface ModerateAccidentBody {
     status: Exclude<AccidentModerationStatus, "PENDING">;
     publicMessage?: string;

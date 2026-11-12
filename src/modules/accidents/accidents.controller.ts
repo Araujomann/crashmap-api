@@ -12,6 +12,7 @@ import {
     accidentModerationListResponseSchema,
     accidentModerationSummaryResponseSchema,
     accidentCreateResponseSchema,
+    accidentOverviewResponseSchema,
     accidentResponseSchema,
     accidentTrustResponseSchema,
     accidentsListResponseSchema,
@@ -42,6 +43,7 @@ import {
     listAccidents,
     getAccidentForModeration,
     getAccidentModerationSummary,
+    getAccidentOverview,
     listAccidentsForModeration,
     listAccidentsForMap,
     moderateAccident,
@@ -85,6 +87,22 @@ async function readAccidentImageUpload(request: FastifyRequest) {
 }
 
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
+    app.get(
+        "/overview",
+        {
+            schema: {
+                tags: ["Accidents"],
+                summary: "Obter estatísticas públicas dos acidentes aprovados",
+                response: { 200: accidentOverviewResponseSchema },
+            },
+        },
+        async (_, reply) => {
+            const overview = await getAccidentOverview();
+
+            return reply.code(200).send({ data: overview });
+        },
+    );
+
     app.get(
         "/moderation/summary",
         {

@@ -360,6 +360,91 @@ export const accidentModerationSummaryResponseSchema = {
     },
 } as const;
 
+const accidentOverviewRecentItemSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: [
+        "id",
+        "tipo_acidente",
+        "classificacao_acidente",
+        "occurred_at",
+        "severity",
+        "source",
+    ],
+    properties: {
+        id: { type: "string" },
+        tipo_acidente: { type: "string" },
+        classificacao_acidente: {
+            type: "string",
+            enum: ["com_vitima", "sem_vitima"],
+        },
+        occurred_at: { type: "string", format: "date-time" },
+        severity: accidentSeveritySchema,
+        source: { type: "string", enum: ["APP", "PRF"] },
+    },
+} as const;
+
+export const accidentOverviewResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+                "approved_accidents_count",
+                "accidents_with_victims_count",
+                "high_severity_accidents_count",
+                "current_30_days_count",
+                "previous_30_days_count",
+                "severity_distribution",
+                "time_of_day",
+                "recent_accidents",
+            ],
+            properties: {
+                approved_accidents_count: { type: "integer", minimum: 0 },
+                accidents_with_victims_count: { type: "integer", minimum: 0 },
+                high_severity_accidents_count: { type: "integer", minimum: 0 },
+                current_30_days_count: { type: "integer", minimum: 0 },
+                previous_30_days_count: { type: "integer", minimum: 0 },
+                severity_distribution: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["low", "medium", "high", "critical"],
+                    properties: {
+                        low: { type: "integer", minimum: 0 },
+                        medium: { type: "integer", minimum: 0 },
+                        high: { type: "integer", minimum: 0 },
+                        critical: { type: "integer", minimum: 0 },
+                    },
+                },
+                time_of_day: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["start_hour", "count"],
+                        properties: {
+                            start_hour: {
+                                type: "integer",
+                                minimum: 0,
+                                maximum: 21,
+                                multipleOf: 3,
+                            },
+                            count: { type: "integer", minimum: 0 },
+                        },
+                    },
+                },
+                recent_accidents: {
+                    type: "array",
+                    items: accidentOverviewRecentItemSchema,
+                },
+            },
+        },
+    },
+} as const;
+
 export const moderateAccidentBodySchema = {
     type: "object",
     additionalProperties: false,
