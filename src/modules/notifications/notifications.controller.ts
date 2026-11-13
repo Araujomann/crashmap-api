@@ -1,9 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import {
-    requireAuthenticatedUser,
-    requireModerator,
-    requireVerifiedEmail,
-} from "../auth/auth.guard.js";
+import { requireAuthenticatedUser, staff } from "../auth/auth.guard.js";
 import {
     registerPushToken,
     unregisterPushToken,
@@ -113,11 +109,7 @@ export const notificationsRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: AdministrativeNoticeBody }>(
         "/administrative-notices",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("notices:publish"),
             schema: {
                 tags: ["Notifications"],
                 summary: "Publicar um aviso para a comunidade",

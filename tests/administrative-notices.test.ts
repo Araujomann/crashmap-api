@@ -69,7 +69,7 @@ test("administrative notices are readable by users and writable by moderators", 
         assert.equal(forbiddenPublish.statusCode, 403);
         assert.equal(
             forbiddenPublish.json().error.code,
-            "AUTH_INSUFFICIENT_ROLE",
+            "AUTH_MISSING_PERMISSION",
         );
 
         const emptyPublish = await app.inject({

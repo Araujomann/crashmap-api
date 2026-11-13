@@ -2,6 +2,7 @@ import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { uploadImageToCloudinary } from "../../shared/services/storage/cloudinary.js";
 import type { AuthUser } from "../auth/auth.types.js";
+import { can } from "../auth/permissions.js";
 import type {
     Accident,
     AccidentComment,
@@ -166,12 +167,11 @@ function parseOccurredAt(value: string): Date {
     return occurredAt;
 }
 
+// Staff pode editar/apagar conteúdo de terceiros (decisão registrada em
+// farol-admin/docs/arquitetura-permissoes.md §11). A auditoria dessas ações
+// entra junto com a tabela AdminAuditLog.
 function canManageAccident(user: AuthUser, accidentOwnerId: string | null) {
-    return (
-        user.role === "admin" ||
-        user.role === "moderator" ||
-        accidentOwnerId === user.id
-    );
+    return accidentOwnerId === user.id || can(user, "reports:moderate");
 }
 
 function ensureUpdatePayload(input: UpdateAccidentBody) {
@@ -968,11 +968,7 @@ async function ensurePublicAccidentExists(accidentId: string) {
 }
 
 function canManageUserContent(user: AuthUser, ownerId: string) {
-    return (
-        user.role === "admin" ||
-        user.role === "moderator" ||
-        ownerId === user.id
-    );
+    return ownerId === user.id || can(user, "reports:moderate");
 }
 
 export async function listAccidentComments(

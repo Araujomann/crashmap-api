@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import {
     requireAuthenticatedUser,
-    requireModerator,
     requireVerifiedEmail,
+    staff,
 } from "../auth/auth.guard.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import {
@@ -108,11 +108,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.get(
         "/moderation/summary",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("stats:read"),
             schema: {
                 tags: ["Accidents"],
                 summary: "Resumo dos relatos enviados pelo aplicativo",
@@ -132,11 +128,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     }>(
         "/moderation",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("reports:read"),
             schema: {
                 tags: ["Accidents"],
                 summary: "Listar relatos para moderação",
@@ -172,11 +164,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     app.get<{ Params: { id: string } }>(
         "/moderation/:id",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("reports:read"),
             schema: {
                 tags: ["Accidents"],
                 summary: "Obter detalhes de um relato para moderação",
@@ -198,11 +186,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     }>(
         "/moderation/:id",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("reports:moderate"),
             schema: {
                 tags: ["Accidents"],
                 summary: "Editar o texto de um relato pendente",
@@ -227,11 +211,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     }>(
         "/",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("reports:read"),
             schema: {
                 tags: ['Accidents'],
                 summary: 'Listar acidentes com paginação e filtros',
@@ -654,11 +634,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     }>(
         "/:id/moderation",
         {
-            preHandler: [
-                requireAuthenticatedUser,
-                requireVerifiedEmail,
-                requireModerator,
-            ],
+            preHandler: staff("reports:moderate"),
             schema: {
                 tags: ["Accidents"],
                 summary: "Aprovar ou rejeitar um relato",

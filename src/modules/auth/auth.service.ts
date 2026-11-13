@@ -13,6 +13,7 @@ import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { buildPasswordResetEmail } from "./password-reset-email.js";
 import { buildVerificationCodeEmail } from "./verification-code-email.js";
+import { permissionsFor } from "./permissions.js";
 import type {
     AccessTokenPayload,
     AuthResponse,
@@ -106,6 +107,7 @@ export function toAuthUser(user: {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: permissionsFor(user.role),
         is_email_verified: user.is_email_verified,
         email_verified_at: user.email_verified_at,
         created_at: user.created_at,

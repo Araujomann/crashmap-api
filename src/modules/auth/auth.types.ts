@@ -1,3 +1,5 @@
+import type { Permission } from "./permissions.js";
+
 export type UserRole = "user" | "moderator" | "admin";
 
 export interface AccessTokenPayload {
@@ -14,6 +16,8 @@ export interface AuthUser {
     name: string;
     email: string;
     role: UserRole;
+    /** Derivadas do papel em `permissions.ts`; o cliente nunca as calcula. */
+    permissions: Permission[];
     is_email_verified: boolean;
     email_verified_at: Date | null;
     created_at: Date;

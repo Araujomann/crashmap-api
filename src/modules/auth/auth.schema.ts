@@ -1,3 +1,5 @@
+import { PERMISSIONS } from "./permissions.js";
+
 export const registerBodySchema = {
     type: "object",
     additionalProperties: false,
@@ -124,12 +126,16 @@ export const refreshBodySchema = {
 export const authUserSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["id", "name", "email", "role", "is_email_verified", "email_verified_at", "created_at", "updated_at"],
+    required: ["id", "name", "email", "role", "permissions", "is_email_verified", "email_verified_at", "created_at", "updated_at"],
     properties: {
         id: { type: "string" },
         name: { type: "string" },
         email: { type: "string" },
         role: { type: "string", enum: ["user", "moderator", "admin"] },
+        permissions: {
+            type: "array",
+            items: { type: "string", enum: [...PERMISSIONS] },
+        },
         is_email_verified: { type: "boolean" },
         email_verified_at: { type: ["string", "null"], format: "date-time" },
         created_at: { type: "string", format: "date-time" },

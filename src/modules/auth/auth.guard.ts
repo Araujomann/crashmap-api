@@ -1,7 +1,7 @@
 import type { preHandlerHookHandler } from "fastify";
 import { prisma } from "../../shared/database/prisma.js";
 import { AuthError, toAuthUser, verifyAccessToken } from "./auth.service.js";
-import type { UserRole } from "./auth.types.js";
+import { can, type Permission } from "./permissions.js";
 
 function readBearerToken(authorizationHeader: string | undefined): string {
     if (!authorizationHeader) {
@@ -64,11 +64,17 @@ export const requireVerifiedEmail: preHandlerHookHandler = async (request) => {
     }
 };
 
-export function requireRole(
-    ...allowedRoles: UserRole[]
+/**
+ * Exige todas as permissões informadas. Usa o papel relido do banco em
+ * `requireAuthenticatedUser`, nunca o papel gravado no JWT.
+ */
+export function requirePermission(
+    ...requiredPermissions: Permission[]
 ): preHandlerHookHandler {
     return async (request) => {
-        if (!request.authUser) {
+        const user = request.authUser;
+
+        if (!user) {
             throw new AuthError(
                 "Authenticated user not found",
                 401,
@@ -76,14 +82,23 @@ export function requireRole(
             );
         }
 
-        if (!allowedRoles.includes(request.authUser.role)) {
+        if (!requiredPermissions.every((permission) => can(user, permission))) {
             throw new AuthError(
-                "You do not have permission to access this resource",
+                "You do not have permission to perform this action",
                 403,
-                "AUTH_INSUFFICIENT_ROLE",
+                "AUTH_MISSING_PERMISSION",
             );
         }
     };
 }
 
-export const requireModerator = requireRole("moderator", "admin");
+/** Cadeia padrão das rotas do painel administrativo. */
+export function staff(
+    ...requiredPermissions: Permission[]
+): preHandlerHookHandler[] {
+    return [
+        requireAuthenticatedUser,
+        requireVerifiedEmail,
+        requirePermission("panel:access", ...requiredPermissions),
+    ];
+}
