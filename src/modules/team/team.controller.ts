@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { RATE_LIMITS } from "../../shared/http/rate-limits.js";
 import {
     requireAuthenticatedUser,
     requireVerifiedEmail,
@@ -169,6 +170,7 @@ export const moderatorInviteAcceptRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: AcceptInviteBody }>(
         "/accept",
         {
+            config: { rateLimit: RATE_LIMITS.inviteAccept },
             preHandler: [requireAuthenticatedUser, requireVerifiedEmail],
             schema: {
                 tags: ["Team"],

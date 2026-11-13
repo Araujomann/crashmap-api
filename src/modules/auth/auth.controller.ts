@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { RATE_LIMITS } from "../../shared/http/rate-limits.js";
 import {
     authResponseSchema,
     forgotPasswordBodySchema,
@@ -41,6 +42,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: ForgotPasswordBody }>(
         "/forgot-password",
         {
+            config: { rateLimit: RATE_LIMITS.passwordReset },
             schema: {
                 tags: ["Auth"],
                 summary: "Solicita um código para redefinir a senha",
@@ -63,6 +65,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: VerifyPasswordResetCodeBody }>(
         "/verify-password-reset-code",
         {
+            config: { rateLimit: RATE_LIMITS.passwordReset },
             schema: {
                 tags: ["Auth"],
                 summary: "Valida o código de recuperação de senha",
@@ -86,6 +89,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: ResetPasswordBody }>(
         "/reset-password",
         {
+            config: { rateLimit: RATE_LIMITS.passwordReset },
             schema: {
                 tags: ["Auth"],
                 summary: "Redefine a senha usando uma autorização válida",
@@ -105,6 +109,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: RegisterBody }>(
         "/register",
         {
+            config: { rateLimit: RATE_LIMITS.register },
             schema: {
                 tags: ['Auth'],
                 summary: 'Registra um novo usuário',
@@ -176,6 +181,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: LoginBody }>(
         "/login",
         {
+            config: { rateLimit: RATE_LIMITS.login },
             schema: {
                 tags: ['Auth'],
                 summary: 'Realiza login na aplicação',

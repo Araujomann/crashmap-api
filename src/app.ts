@@ -1,6 +1,9 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
-import  cors from "@fastify/cors";
+import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
+import { env } from "./shared/config/env.js";
+import { rateLimitError } from "./shared/http/rate-limits.js";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import { prisma } from "./shared/database/prisma.js";
@@ -25,8 +28,25 @@ const healthDataSchema = {
     },
 } as const;
 
-export async function buildApp() {
-    const app = Fastify({ logger: true });
+export interface BuildAppOptions {
+    /** Padrão: `RATE_LIMIT_ENABLED` do ambiente. */
+    rateLimit?: boolean;
+}
+
+export async function buildApp(options: BuildAppOptions = {}) {
+    // trustProxy: de quem aceitar X-Forwarded-For para obter o IP real do
+    // cliente (auditoria e limites). Ver TRUST_PROXY em shared/config/env.ts.
+    const app = Fastify({ logger: true, trustProxy: env.TRUST_PROXY });
+
+    if (options.rateLimit ?? env.RATE_LIMIT_ENABLED) {
+        // global: false — só as rotas com `config.rateLimit` são limitadas.
+        // preHandler: o corpo já foi lido (o limite de login usa o e-mail).
+        await app.register(rateLimit, {
+            global: false,
+            hook: "preHandler",
+            errorResponseBuilder: rateLimitError,
+        });
+    }
 
     await app.register(fastifySwagger, {
         openapi: {
@@ -78,8 +98,9 @@ export async function buildApp() {
         staticCSP: true,
         transformStaticCSP: (header) => header,
     });
+    // Só origens listadas (CORS_ORIGINS). O painel usa o BFF e não precisa.
     await app.register(cors, {
-        origin: true, 
+        origin: env.CORS_ORIGINS,
     });
 
     await app.register(multipart, {
@@ -89,7 +110,16 @@ export async function buildApp() {
     });
 
     app.setErrorHandler(async (error, request, reply) => {
-        request.log.error({ err: error }, "request failed");
+        // Recusa esperada (4xx: senha errada, sem permissão, limite) não é
+        // falha do servidor: fica em "info" para não poluir os alertas.
+        if (error instanceof AppError && error.statusCode < 500) {
+            request.log.info(
+                { code: error.code, statusCode: error.statusCode },
+                "request rejected",
+            );
+        } else {
+            request.log.error({ err: error }, "request failed");
+        }
 
         if (error instanceof AppError) {
             return reply.code(error.statusCode).send({
