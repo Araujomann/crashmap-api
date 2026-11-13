@@ -115,6 +115,17 @@ export function toAuthUser(user: {
     };
 }
 
+/** Conta suspensa por um administrador não autentica nem renova sessão. */
+export function ensureNotSuspended(user: { suspended_at: Date | null }) {
+    if (user.suspended_at) {
+        throw new AuthError(
+            "Esta conta está suspensa. Entre em contato com a equipe do Farol.",
+            403,
+            "AUTH_ACCOUNT_SUSPENDED",
+        );
+    }
+}
+
 export function hashPassword(password: string): string {
     const salt = randomBytes(PASSWORD_SALT_BYTES).toString("hex");
     const derivedKey = scryptSync(password, salt, PASSWORD_KEY_BYTES).toString(
@@ -870,6 +881,9 @@ export async function loginUser(input: LoginBody): Promise<AuthResponse> {
         );
     }
 
+    // Só depois da senha: não revela a suspensão para quem não é o dono.
+    ensureNotSuspended(user);
+
     const tokens = buildTokens(user);
     await storeRefreshToken(user.id, tokens.refreshToken);
 
@@ -900,6 +914,8 @@ export async function refreshSession(
             "AUTH_INVALID_REFRESH_TOKEN",
         );
     }
+
+    ensureNotSuspended(tokenRecord.user);
 
     const tokens = buildTokens(tokenRecord.user);
 

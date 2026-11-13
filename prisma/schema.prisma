@@ -58,6 +58,11 @@ enum admin_audit_action {
   REPORT_DELETED_BY_STAFF
   COMMENT_DELETED_BY_STAFF
   IMAGE_DELETED_BY_STAFF
+  USER_SUSPENDED
+  USER_REACTIVATED
+  USER_SESSIONS_REVOKED
+  SETTINGS_UPDATED
+  ROLE_GRANTED_BY_SCRIPT
 }
 
 model User {
@@ -71,9 +76,16 @@ model User {
   role role @default(user)
   // Preenchido quando a conta é anonimizada (ex-staff com trilha de moderação).
   deleted_at DateTime?
+  // Suspensão (reversível): bloqueia login, refresh e todas as rotas.
+  suspended_at DateTime?
+  suspended_reason String?
+  suspended_by_id String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  suspended_by User? @relation("UserSuspendedBy", fields: [suspended_by_id], references: [id], onDelete: SetNull)
+  suspended_users User[] @relation("UserSuspendedBy")
+  settings_updated PlatformSetting[]
   accidents Accident[]
   moderated_accidents Accident[] @relation("AccidentModerator")
   accident_comments AccidentComment[]
@@ -89,6 +101,8 @@ model User {
   invites_accepted ModeratorInvite[] @relation("InviteAcceptedBy")
   invites_revoked ModeratorInvite[] @relation("InviteRevokedBy")
   audit_logs AdminAuditLog[] @relation("AuditActor")
+
+  @@index([suspended_at])
 }
 
 // Índice parcial "um convite em aberto por e-mail" e trigger somente-inserção
@@ -117,6 +131,18 @@ model ModeratorInvite {
   @@index([expires_at])
   @@index([created_at])
   @@map("moderator_invites")
+}
+
+// Valores ausentes usam o padrão definido em src/modules/settings.
+model PlatformSetting {
+  key           String   @id
+  value         Json
+  updated_by_id String?
+  updated_at    DateTime @updatedAt
+
+  updated_by User? @relation(fields: [updated_by_id], references: [id], onDelete: SetNull)
+
+  @@map("platform_settings")
 }
 
 model AdminAuditLog {

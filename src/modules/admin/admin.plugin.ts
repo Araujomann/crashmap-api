@@ -2,6 +2,11 @@ import type { FastifyPluginAsync, preHandlerHookHandler } from "fastify";
 import { staff } from "../auth/auth.guard.js";
 import { moderationHistoryRoutes } from "../moderation/moderation-history.controller.js";
 import {
+    auditLogRoutes,
+    settingsRoutes,
+    usersAdminRoutes,
+} from "./admin-panel.controller.js";
+import {
     moderatorInvitesAdminRoutes,
     moderatorsAdminRoutes,
 } from "../team/team.controller.js";
@@ -34,4 +39,7 @@ export const adminPlugin: FastifyPluginAsync = async (app) => {
         prefix: "/moderator-invites",
     });
     await app.register(moderatorsAdminRoutes, { prefix: "/moderators" });
+    await app.register(usersAdminRoutes, { prefix: "/users" });
+    await app.register(auditLogRoutes, { prefix: "/audit-logs" });
+    await app.register(settingsRoutes, { prefix: "/settings" });
 };

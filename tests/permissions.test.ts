@@ -83,6 +83,20 @@ const STAFF_ROUTES: StaffRoute[] = [
         url: `/admin/moderator-invites/${missingId}/resend`,
         adminOnly: true,
     },
+    { method: "GET", url: "/admin/users", adminOnly: true },
+    { method: "GET", url: `/admin/users/${missingId}`, adminOnly: true },
+    {
+        method: "POST",
+        url: `/admin/users/${missingId}/suspend`,
+        payload: { reason: "teste" },
+        adminOnly: true,
+    },
+    { method: "POST", url: `/admin/users/${missingId}/reactivate`, adminOnly: true },
+    { method: "POST", url: `/admin/users/${missingId}/sessions/revoke`, adminOnly: true },
+    { method: "GET", url: "/admin/audit-logs", adminOnly: true },
+    { method: "GET", url: "/admin/settings", adminOnly: true },
+    // PATCH /admin/settings fica em admin-panel.test.ts: aqui ele alteraria
+    // a configuração real do banco local.
     {
         method: "POST",
         url: `/admin/moderator-invites/${missingId}/revoke`,

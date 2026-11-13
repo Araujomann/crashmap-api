@@ -1,6 +1,11 @@
 import type { preHandlerHookHandler } from "fastify";
 import { prisma } from "../../shared/database/prisma.js";
-import { AuthError, toAuthUser, verifyAccessToken } from "./auth.service.js";
+import {
+    AuthError,
+    ensureNotSuspended,
+    toAuthUser,
+    verifyAccessToken,
+} from "./auth.service.js";
 import { can, type Permission } from "./permissions.js";
 
 function readBearerToken(authorizationHeader: string | undefined): string {
@@ -43,6 +48,9 @@ export const requireAuthenticatedUser: preHandlerHookHandler = async (
             "AUTH_USER_NOT_FOUND",
         );
     }
+
+    // Suspensão vale na hora, inclusive para access tokens já emitidos.
+    ensureNotSuspended(user);
 
     request.authUser = toAuthUser(user);
 };

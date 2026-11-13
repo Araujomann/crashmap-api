@@ -6,6 +6,7 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { toAuthUser } from "../auth/auth.service.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { recordAudit, type AuditContext } from "../audit/audit.service.js";
+import { getSettings } from "../settings/settings.service.js";
 import { buildInviteUrl, sendModeratorInviteEmail } from "./invite-email.js";
 import type {
     InviteDelivery,
@@ -14,9 +15,9 @@ import type {
     ModeratorInvite,
 } from "./team.types.js";
 
-export const INVITE_TTL_MS = 72 * 60 * 60 * 1000;
+// Validade e limite diário por e-mail vêm das configurações da plataforma
+// (`invite_ttl_hours`, `invite_max_sends_per_day`).
 const RESEND_COOLDOWN_MS = 60 * 1000;
-const MAX_SENDS_PER_EMAIL_PER_DAY = 5;
 const MAX_INVITES_PER_ADMIN_PER_HOUR = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -98,11 +99,11 @@ function statusWhere(status: InviteStatus | undefined, now: Date) {
     }
 }
 
-async function ensureSendAllowed(email: string, now: Date) {
+async function ensureSendAllowed(email: string, now: Date, maxPerDay: number) {
     const sentToday = await prisma.moderatorInvite.count({
         where: { email, created_at: { gt: new Date(now.getTime() - DAY_MS) } },
     });
-    if (sentToday >= MAX_SENDS_PER_EMAIL_PER_DAY) {
+    if (sentToday >= maxPerDay) {
         throw new AppError(
             "Too many invites sent to this email today",
             429,
@@ -193,7 +194,9 @@ export async function createInvite(
             "INVITE_RATE_LIMITED",
         );
     }
-    await ensureSendAllowed(email, now);
+    const settings = await getSettings();
+    await ensureSendAllowed(email, now, settings.invite_max_sends_per_day);
+    const ttlMs = settings.invite_ttl_hours * HOUR_MS;
 
     const token = generateInviteToken();
     const invite = await prisma.$transaction(async (transaction) => {
@@ -223,7 +226,7 @@ export async function createInvite(
                 email,
                 token_hash: hashInviteToken(token),
                 invited_by_id: actor.id,
-                expires_at: new Date(now.getTime() + INVITE_TTL_MS),
+                expires_at: new Date(now.getTime() + ttlMs),
                 last_sent_at: now,
             },
             include: inviteInclude,
@@ -280,7 +283,9 @@ export async function resendInvite(
             "INVITE_RESEND_COOLDOWN",
         );
     }
-    await ensureSendAllowed(current.email, now);
+    const settings = await getSettings();
+    await ensureSendAllowed(current.email, now, settings.invite_max_sends_per_day);
+    const ttlMs = settings.invite_ttl_hours * HOUR_MS;
 
     const token = generateInviteToken();
     const invite = await prisma.$transaction(async (transaction) => {
@@ -301,7 +306,7 @@ export async function resendInvite(
                 email: current.email,
                 token_hash: hashInviteToken(token),
                 invited_by_id: actor.id,
-                expires_at: new Date(now.getTime() + INVITE_TTL_MS),
+                expires_at: new Date(now.getTime() + ttlMs),
                 last_sent_at: now,
                 send_count: current.send_count + 1,
             },

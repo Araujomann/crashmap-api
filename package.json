@@ -10,7 +10,8 @@
         "start": "node dist/src/server.js",
         "prisma:generate": "prisma generate",
         "import:prf": "tsx src/shared/scripts/import-prf.ts",
-        "sync:prf": "tsx src/shared/scripts/sync-prf.ts"
+        "sync:prf": "tsx src/shared/scripts/sync-prf.ts",
+        "admin:grant-role": "tsx src/shared/scripts/grant-role.ts"
     },
     "keywords": [],
     "author": "",

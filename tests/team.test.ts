@@ -6,6 +6,7 @@ import {
     setModeratorInviteMailer,
     type ModeratorInviteMessage,
 } from "../src/modules/team/invite-email.js";
+import { getSettings } from "../src/modules/settings/settings.service.js";
 import { purgeStaffTrail } from "./helpers/staff-trail.js";
 
 function tokenFrom(message: ModeratorInviteMessage) {
@@ -109,9 +110,13 @@ test("moderator invites, team management and staff audit", async () => {
         assert.equal(firstInvite.status, "PENDING");
         assert.equal(firstInvite.email, invitee.email);
         assert.equal(firstInvite.invited_by.id, admin.id);
+        const { invite_ttl_hours: ttlHours } = await getSettings();
         const hoursValid =
             (new Date(firstInvite.expires_at).getTime() - Date.now()) / 3_600_000;
-        assert.ok(hoursValid > 71.9 && hoursValid <= 72, `validade ${hoursValid}h`);
+        assert.ok(
+            hoursValid > ttlHours - 0.1 && hoursValid <= ttlHours,
+            `validade ${hoursValid}h, configurado ${ttlHours}h`,
+        );
         assert.equal(sent.length, 1);
         assert.equal(sent[0].to, invitee.email);
         assert.match(sent[0].inviteUrl, /\/invite#token=/);

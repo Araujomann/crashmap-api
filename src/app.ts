@@ -52,6 +52,10 @@ export async function buildApp() {
                     name: "Team",
                     description: "Convites e gestão da equipe de moderação",
                 },
+                {
+                    name: "Admin",
+                    description: "Contas, auditoria e configurações (somente ADMIN)",
+                },
             ],
             components: {
                 securitySchemes: {

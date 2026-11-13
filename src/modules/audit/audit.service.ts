@@ -9,7 +9,8 @@ export type AuditTargetType =
     | "user"
     | "accident"
     | "comment"
-    | "image";
+    | "image"
+    | "settings";
 
 /** De onde veio a ação: preenchido pelo controller a partir da requisição. */
 export interface AuditContext {
