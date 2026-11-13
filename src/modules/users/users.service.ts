@@ -175,14 +175,25 @@ export async function deleteMe(
         }
     }
 
-    const [decisions, notices] = await Promise.all([
+    // Tudo que referencia a conta com FK `Restrict` (trilha de staff).
+    const trail = await Promise.all([
         prisma.accidentModerationHistory.count({
             where: { moderated_by_id: userId },
         }),
         prisma.administrativeNotice.count({ where: { created_by_id: userId } }),
+        prisma.adminAuditLog.count({ where: { actor_id: userId } }),
+        prisma.moderatorInvite.count({
+            where: {
+                OR: [
+                    { invited_by_id: userId },
+                    { accepted_by_id: userId },
+                    { revoked_by_id: userId },
+                ],
+            },
+        }),
     ]);
 
-    if (decisions + notices > 0) {
+    if (trail.some((count) => count > 0)) {
         await anonymizeAccount(userId);
         return;
     }

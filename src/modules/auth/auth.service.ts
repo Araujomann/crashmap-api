@@ -76,11 +76,11 @@ function generateSixDigitCode(): string {
     return randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
 
-function isMailConfigured(): boolean {
+export function isMailConfigured(): boolean {
     return Boolean(env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM);
 }
 
-function createMailTransporter() {
+export function createMailTransporter() {
     return nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 465,

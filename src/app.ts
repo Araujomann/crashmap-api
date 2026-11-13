@@ -11,6 +11,7 @@ import { authRoutes } from "./modules/auth/auth.controller.js";
 import { notificationsRoutes } from "./modules/notifications/notifications.controller.js";
 import { usersRoutes } from "./modules/users/users.controller.js";
 import { adminPlugin } from "./modules/admin/admin.plugin.js";
+import { moderatorInviteAcceptRoutes } from "./modules/team/team.controller.js";
 
 
 const healthDataSchema = {
@@ -46,6 +47,10 @@ export async function buildApp() {
                 {
                     name: "Moderation",
                     description: "Histórico e auditoria da moderação (painel)",
+                },
+                {
+                    name: "Team",
+                    description: "Convites e gestão da equipe de moderação",
                 },
             ],
             components: {
@@ -118,6 +123,7 @@ export async function buildApp() {
     app.register(authRoutes, { prefix: "/auth" });
     app.register(usersRoutes, { prefix: "/users" });
     app.register(adminPlugin, { prefix: "/admin" });
+    app.register(moderatorInviteAcceptRoutes, { prefix: "/moderator-invites" });
     app.register(notificationsRoutes, { prefix: "/notifications" });
     app.register(accidentsRoutes, { prefix: "/accidents" });
 

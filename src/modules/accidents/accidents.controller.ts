@@ -5,6 +5,7 @@ import {
     staff,
 } from "../auth/auth.guard.js";
 import type { AuthUser } from "../auth/auth.types.js";
+import { auditContextFrom } from "../audit/audit.service.js";
 import {
     accidentIdParamsSchema,
     accidentCommentsListResponseSchema,
@@ -449,6 +450,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
                 request.authUser as AuthUser,
                 request.params.id,
                 request.params.commentId,
+                auditContextFrom(request),
             );
 
             return reply.code(200).send({ data: { deleted: true } });
@@ -548,6 +550,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
                 request.authUser as AuthUser,
                 request.params.id,
                 request.params.imageId,
+                auditContextFrom(request),
             );
 
             return reply.code(200).send({ data: { deleted: true } });
@@ -598,6 +601,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
                 request.authUser as AuthUser,
                 request.params.id,
                 request.body,
+                auditContextFrom(request),
             );
 
             return reply.code(200).send({ data: accident });
@@ -622,6 +626,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             await deleteAccident(
                 request.authUser as AuthUser,
                 request.params.id,
+                auditContextFrom(request),
             );
 
             return reply.code(200).send({ data: { deleted: true } });

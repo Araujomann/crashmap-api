@@ -9,6 +9,7 @@ import {
     type Permission,
 } from "../src/modules/auth/permissions.js";
 import { prisma } from "../src/shared/database/prisma.js";
+import { purgeStaffTrail } from "./helpers/staff-trail.js";
 
 const MODERATOR_PERMISSIONS: Permission[] = [
     "panel:access",
@@ -44,6 +45,8 @@ interface StaffRoute {
     method: "GET" | "PATCH" | "POST";
     url: string;
     payload?: Record<string, unknown>;
+    /** Só ADMIN passa; MODERATOR recebe 403. */
+    adminOnly?: boolean;
 }
 
 // Toda rota protegida por `staff(...)` precisa estar aqui.
@@ -69,6 +72,28 @@ const STAFF_ROUTES: StaffRoute[] = [
         method: "POST",
         url: "/notifications/administrative-notices",
         payload: { message: "   " },
+    },
+    { method: "GET", url: "/admin/moderation-history" },
+    { method: "GET", url: "/admin/moderation-history/moderators" },
+    // Exclusivas de ADMIN. Nenhuma cria convite nem envia e-mail: as que
+    // alteram algo usam um id inexistente (404 para quem tem permissão).
+    { method: "GET", url: "/admin/moderator-invites", adminOnly: true },
+    {
+        method: "POST",
+        url: `/admin/moderator-invites/${missingId}/resend`,
+        adminOnly: true,
+    },
+    {
+        method: "POST",
+        url: `/admin/moderator-invites/${missingId}/revoke`,
+        adminOnly: true,
+    },
+    { method: "GET", url: "/admin/moderators", adminOnly: true },
+    {
+        method: "POST",
+        url: `/admin/moderators/${missingId}/revoke`,
+        payload: { reason: "teste" },
+        adminOnly: true,
     },
 ];
 
@@ -161,13 +186,27 @@ test("staff routes enforce authentication, verified email and permissions", asyn
                 `unverified ${label}`,
             );
 
-            for (const actor of ["moderator", "admin"] as const) {
-                const response = await call(actor);
+            const moderatorResponse = await call("moderator");
+            if (route.adminOnly) {
+                assert.equal(moderatorResponse.statusCode, 403, `moderator ${label}`);
+                assert.equal(
+                    moderatorResponse.json().error.code,
+                    "AUTH_MISSING_PERMISSION",
+                    `moderator ${label}`,
+                );
+            } else {
                 assert.ok(
-                    response.statusCode !== 401 && response.statusCode !== 403,
-                    `${actor} ${label} → ${response.statusCode} ${response.body}`,
+                    moderatorResponse.statusCode !== 401 &&
+                        moderatorResponse.statusCode !== 403,
+                    `moderator ${label} → ${moderatorResponse.statusCode} ${moderatorResponse.body}`,
                 );
             }
+
+            const adminResponse = await call("admin");
+            assert.ok(
+                adminResponse.statusCode !== 401 && adminResponse.statusCode !== 403,
+                `admin ${label} → ${adminResponse.statusCode} ${adminResponse.body}`,
+            );
         }
 
         // Staff mantém o poder de editar relato de terceiros pela rota pública;
@@ -210,6 +249,12 @@ test("staff routes enforce authentication, verified email and permissions", asyn
         if (accidentId) {
             await prisma.accident.deleteMany({ where: { id: accidentId } });
         }
+        // A edição feita pelo moderador gera auditoria, que referencia a conta.
+        const testUsers = await prisma.user.findMany({
+            where: { email: { in: emails } },
+            select: { id: true },
+        });
+        await purgeStaffTrail(testUsers.map((user) => user.id));
         await prisma.user.deleteMany({ where: { email: { in: emails } } });
         await app.close();
     }

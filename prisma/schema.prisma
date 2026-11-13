@@ -48,6 +48,18 @@ enum push_platform {
   ios
 }
 
+enum admin_audit_action {
+  MODERATOR_INVITE_CREATED
+  MODERATOR_INVITE_RESENT
+  MODERATOR_INVITE_REVOKED
+  MODERATOR_INVITE_ACCEPTED
+  MODERATOR_ROLE_REVOKED
+  REPORT_EDITED_BY_STAFF
+  REPORT_DELETED_BY_STAFF
+  COMMENT_DELETED_BY_STAFF
+  IMAGE_DELETED_BY_STAFF
+}
+
 model User {
   id  String @id @default(uuid())
   name String
@@ -73,6 +85,59 @@ model User {
   refresh_tokens RefreshToken[]
   verification_tokens VerificationToken[]
   password_reset_tokens PasswordResetToken[]
+  invites_sent ModeratorInvite[] @relation("InviteInvitedBy")
+  invites_accepted ModeratorInvite[] @relation("InviteAcceptedBy")
+  invites_revoked ModeratorInvite[] @relation("InviteRevokedBy")
+  audit_logs AdminAuditLog[] @relation("AuditActor")
+}
+
+// Índice parcial "um convite em aberto por e-mail" e trigger somente-inserção
+// da auditoria ficam no SQL da migration (o Prisma não os representa).
+model ModeratorInvite {
+  id             String    @id @default(uuid())
+  // Sempre minúsculo.
+  email          String
+  // HMAC do token enviado por e-mail; o token em si nunca é salvo.
+  token_hash     String    @unique
+  invited_by_id  String
+  expires_at     DateTime
+  accepted_at    DateTime?
+  accepted_by_id String?
+  revoked_at     DateTime?
+  revoked_by_id  String?
+  last_sent_at   DateTime  @default(now())
+  send_count     Int       @default(1)
+  created_at     DateTime  @default(now())
+
+  invited_by  User  @relation("InviteInvitedBy", fields: [invited_by_id], references: [id], onDelete: Restrict)
+  accepted_by User? @relation("InviteAcceptedBy", fields: [accepted_by_id], references: [id], onDelete: Restrict)
+  revoked_by  User? @relation("InviteRevokedBy", fields: [revoked_by_id], references: [id], onDelete: Restrict)
+
+  @@index([email])
+  @@index([expires_at])
+  @@index([created_at])
+  @@map("moderator_invites")
+}
+
+model AdminAuditLog {
+  id          String             @id @default(uuid())
+  // null = ação do sistema ou de script.
+  actor_id    String?
+  action      admin_audit_action
+  target_type String
+  target_id   String?
+  // Contexto (motivo, antes/depois, retrato do conteúdo). Nunca tokens.
+  metadata    Json               @default("{}")
+  ip          String?
+  user_agent  String?
+  created_at  DateTime           @default(now())
+
+  actor User? @relation("AuditActor", fields: [actor_id], references: [id], onDelete: Restrict)
+
+  @@index([created_at])
+  @@index([actor_id, created_at])
+  @@index([target_type, target_id])
+  @@map("admin_audit_logs")
 }
 
 model PushToken {

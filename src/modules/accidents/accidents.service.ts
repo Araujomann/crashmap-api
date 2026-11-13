@@ -3,6 +3,11 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { uploadImageToCloudinary } from "../../shared/services/storage/cloudinary.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { can } from "../auth/permissions.js";
+import {
+    NO_AUDIT_CONTEXT,
+    recordAudit,
+    type AuditContext,
+} from "../audit/audit.service.js";
 import type {
     Accident,
     AccidentComment,
@@ -877,10 +882,51 @@ export async function moderateAccident(
     });
 }
 
+/** Campos do relato comparados na auditoria de edição feita por staff. */
+const AUDITED_ACCIDENT_FIELDS = [
+    "tipo_acidente",
+    "classificacao_acidente",
+    "condicao_meteorologica",
+    "description",
+    "latitude",
+    "longitude",
+    "occurred_at",
+    "severity",
+] as const;
+
+function auditValue(value: unknown): string | number | null {
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === "number" || typeof value === "string") return value;
+    return null;
+}
+
+function accidentSnapshot(accident: {
+    tipo_acidente: string;
+    description: string | null;
+    severity: string;
+    moderation_status: string;
+    latitude: number;
+    longitude: number;
+    occurred_at: Date;
+    created_by_id: string | null;
+}) {
+    return {
+        tipo_acidente: accident.tipo_acidente,
+        description: accident.description,
+        severity: accident.severity,
+        moderation_status: accident.moderation_status,
+        latitude: accident.latitude,
+        longitude: accident.longitude,
+        occurred_at: accident.occurred_at.toISOString(),
+        created_by_id: accident.created_by_id,
+    };
+}
+
 export async function updateAccident(
     user: AuthUser,
     accidentId: string,
     input: UpdateAccidentBody,
+    auditContext: AuditContext = NO_AUDIT_CONTEXT,
 ): Promise<Accident> {
     ensureUpdatePayload(input);
 
@@ -900,24 +946,59 @@ export async function updateAccident(
         );
     }
 
-    const accident = await prisma.accident.update({
-        where: { id: accidentId },
-        data: {
-            tipo_acidente: input.tipo_acidente?.trim(),
-            classificacao_acidente: input.classificacao_acidente,
-            condicao_meteorologica: input.condicao_meteorologica,
-            description:
-                input.description === undefined
-                    ? undefined
-                    : input.description?.trim() || null,
-            latitude: input.latitude,
-            longitude: input.longitude,
-            occurred_at:
-                input.occurredAt === undefined
-                    ? undefined
-                    : parseOccurredAt(input.occurredAt),
-            severity: input.severity,
-        },
+    const actingAsStaff = currentAccident.created_by_id !== user.id;
+
+    const accident = await prisma.$transaction(async (transaction) => {
+        const updated = await transaction.accident.update({
+            where: { id: accidentId },
+            data: {
+                tipo_acidente: input.tipo_acidente?.trim(),
+                classificacao_acidente: input.classificacao_acidente,
+                condicao_meteorologica: input.condicao_meteorologica,
+                description:
+                    input.description === undefined
+                        ? undefined
+                        : input.description?.trim() || null,
+                latitude: input.latitude,
+                longitude: input.longitude,
+                occurred_at:
+                    input.occurredAt === undefined
+                        ? undefined
+                        : parseOccurredAt(input.occurredAt),
+                severity: input.severity,
+            },
+        });
+
+        if (actingAsStaff) {
+            const before: Record<string, string | number | null> = {};
+            const after: Record<string, string | number | null> = {};
+            for (const field of AUDITED_ACCIDENT_FIELDS) {
+                const previous = auditValue(currentAccident[field]);
+                const next = auditValue(updated[field]);
+                if (previous !== next) {
+                    before[field] = previous;
+                    after[field] = next;
+                }
+            }
+
+            await recordAudit(
+                transaction,
+                {
+                    actorId: user.id,
+                    action: "REPORT_EDITED_BY_STAFF",
+                    targetType: "accident",
+                    targetId: accidentId,
+                    metadata: {
+                        author_id: currentAccident.created_by_id,
+                        before,
+                        after,
+                    },
+                },
+                auditContext,
+            );
+        }
+
+        return updated;
     });
 
     return toAccident(accident);
@@ -926,6 +1007,7 @@ export async function updateAccident(
 export async function deleteAccident(
     user: AuthUser,
     accidentId: string,
+    auditContext: AuditContext = NO_AUDIT_CONTEXT,
 ): Promise<void> {
     const currentAccident = await prisma.accident.findUnique({
         where: { id: accidentId },
@@ -951,8 +1033,24 @@ export async function deleteAccident(
         );
     }
 
-    await prisma.accident.delete({
-        where: { id: accidentId },
+    await prisma.$transaction(async (transaction) => {
+        await transaction.accident.delete({
+            where: { id: accidentId },
+        });
+
+        if (currentAccident.created_by_id !== user.id) {
+            await recordAudit(
+                transaction,
+                {
+                    actorId: user.id,
+                    action: "REPORT_DELETED_BY_STAFF",
+                    targetType: "accident",
+                    targetId: accidentId,
+                    metadata: { snapshot: accidentSnapshot(currentAccident) },
+                },
+                auditContext,
+            );
+        }
     });
 }
 
@@ -1084,10 +1182,11 @@ export async function deleteAccidentComment(
     user: AuthUser,
     accidentId: string,
     commentId: string,
+    auditContext: AuditContext = NO_AUDIT_CONTEXT,
 ): Promise<void> {
     const comment = await prisma.accidentComment.findFirst({
         where: { id: commentId, accident_id: accidentId },
-        select: { id: true, created_by_id: true },
+        select: { id: true, created_by_id: true, body: true, created_at: true },
     });
 
     if (!comment) {
@@ -1102,8 +1201,29 @@ export async function deleteAccidentComment(
         );
     }
 
-    await prisma.accidentComment.delete({
-        where: { id: commentId },
+    await prisma.$transaction(async (transaction) => {
+        await transaction.accidentComment.delete({
+            where: { id: commentId },
+        });
+
+        if (comment.created_by_id !== user.id) {
+            await recordAudit(
+                transaction,
+                {
+                    actorId: user.id,
+                    action: "COMMENT_DELETED_BY_STAFF",
+                    targetType: "comment",
+                    targetId: commentId,
+                    metadata: {
+                        accident_id: accidentId,
+                        author_id: comment.created_by_id,
+                        body: comment.body,
+                        created_at: comment.created_at.toISOString(),
+                    },
+                },
+                auditContext,
+            );
+        }
     });
 }
 
@@ -1148,10 +1268,17 @@ export async function deleteAccidentImage(
     user: AuthUser,
     accidentId: string,
     imageId: string,
+    auditContext: AuditContext = NO_AUDIT_CONTEXT,
 ): Promise<void> {
     const image = await prisma.accidentImage.findFirst({
         where: { id: imageId, accident_id: accidentId },
-        select: { id: true, created_by_id: true },
+        select: {
+            id: true,
+            created_by_id: true,
+            image_url: true,
+            caption: true,
+            created_at: true,
+        },
     });
 
     if (!image) {
@@ -1166,7 +1293,29 @@ export async function deleteAccidentImage(
         );
     }
 
-    await prisma.accidentImage.delete({
-        where: { id: imageId },
+    await prisma.$transaction(async (transaction) => {
+        await transaction.accidentImage.delete({
+            where: { id: imageId },
+        });
+
+        if (image.created_by_id !== user.id) {
+            await recordAudit(
+                transaction,
+                {
+                    actorId: user.id,
+                    action: "IMAGE_DELETED_BY_STAFF",
+                    targetType: "image",
+                    targetId: imageId,
+                    metadata: {
+                        accident_id: accidentId,
+                        author_id: image.created_by_id,
+                        image_url: image.image_url,
+                        caption: image.caption,
+                        created_at: image.created_at.toISOString(),
+                    },
+                },
+                auditContext,
+            );
+        }
     });
 }

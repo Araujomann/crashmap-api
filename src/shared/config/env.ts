@@ -67,6 +67,10 @@ export const env = {
     ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
     REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
     FRONTEND_URL: process.env.FRONTEND_URL?.trim() || "http://localhost:19006",
+    // Painel administrativo: base dos links de convite de moderador.
+    ADMIN_PANEL_URL: (
+        process.env.ADMIN_PANEL_URL?.trim() || "http://localhost:3000"
+    ).replace(/\/+$/, ""),
     SMTP_USER: process.env.SMTP_USER?.trim() ?? "",
     SMTP_PASS: process.env.SMTP_PASS?.replace(/\s/g, "") ?? "",
     SMTP_FROM:
