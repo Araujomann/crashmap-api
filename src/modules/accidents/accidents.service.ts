@@ -12,6 +12,7 @@ import type {
     AccidentMapItem,
     AccidentMapQuery,
     AccidentMapResult,
+    AccidentMapVersion,
     AccidentModerationListItem,
     AccidentModerationListResult,
     AccidentModerationStatus,
@@ -388,6 +389,28 @@ export async function listAccidentsForMap(
     }));
 
     return { data, total: data.length };
+}
+
+/**
+ * Lightweight fingerprint of the approved accidents shown on the map.
+ * Clients compare it with the version they cached to decide whether
+ * the map payload needs to be downloaded again.
+ */
+export async function getAccidentsMapVersion(): Promise<AccidentMapVersion> {
+    const result = await prisma.accident.aggregate({
+        where: { moderation_status: "APPROVED" },
+        _count: { _all: true },
+        _max: { updated_at: true },
+    });
+
+    const total = result._count._all;
+    const lastUpdatedAt = result._max.updated_at ?? null;
+
+    return {
+        version: `${total}:${lastUpdatedAt?.getTime() ?? 0}`,
+        total,
+        last_updated_at: lastUpdatedAt,
+    };
 }
 
 export async function getAccidentOverview(

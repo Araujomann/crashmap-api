@@ -204,6 +204,12 @@ export interface AccidentMapResult {
     total: number;
 }
 
+export interface AccidentMapVersion {
+    version: string;
+    total: number;
+    last_updated_at: Date | null;
+}
+
 export interface UpdateAccidentBody {
     tipo_acidente?: string;
     description?: string | null;

@@ -230,6 +230,27 @@ export const accidentsMapResponseSchema = {
     },
 } as const;
 
+export const accidentsMapVersionResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["version", "total", "last_updated_at"],
+            properties: {
+                version: { type: "string" },
+                total: { type: "number" },
+                last_updated_at: {
+                    type: ["string", "null"],
+                    format: "date-time",
+                },
+            },
+        },
+    },
+} as const;
+
 export const accidentsListResponseSchema = {
     type: "object",
     additionalProperties: false,

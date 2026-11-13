@@ -17,6 +17,7 @@ import {
     accidentTrustResponseSchema,
     accidentsListResponseSchema,
     accidentsMapResponseSchema,
+    accidentsMapVersionResponseSchema,
     createAccidentCommentBodySchema,
     createAccidentBodySchema,
     deletedAccidentResponseSchema,
@@ -46,6 +47,7 @@ import {
     getAccidentOverview,
     listAccidentsForModeration,
     listAccidentsForMap,
+    getAccidentsMapVersion,
     moderateAccident,
     removeAccidentTrust,
     updateAccident,
@@ -280,6 +282,24 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
             const result = await listAccidentsForMap(request.query);
 
             return reply.code(200).send(result);
+        },
+    );
+
+    app.get(
+        "/map/version",
+        {
+            schema: {
+                tags: ['Accidents'],
+                summary: 'Versão atual dos acidentes do mapa (para cache no cliente)',
+                response: {
+                    200: accidentsMapVersionResponseSchema,
+                },
+            },
+        },
+        async (_request, reply) => {
+            const version = await getAccidentsMapVersion();
+
+            return reply.code(200).send({ data: version });
         },
     );
 
