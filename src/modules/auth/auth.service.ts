@@ -12,6 +12,7 @@ import { env } from "../../shared/config/env.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { buildPasswordResetEmail } from "./password-reset-email.js";
+import { buildVerificationCodeEmail } from "./verification-code-email.js";
 import type {
     AccessTokenPayload,
     AuthResponse,
@@ -54,11 +55,40 @@ const PASSWORD_RESET_REQUEST_WINDOW_MS = 60 * 60 * 1000;
 const PASSWORD_RESET_REQUEST_COOLDOWN_MS = 60 * 1000;
 const PASSWORD_RESET_MAX_REQUESTS = 3;
 const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+const EMAIL_VERIFICATION_CODE_TTL_MS = 60 * 60 * 1000;
+const EMAIL_VERIFICATION_RESEND_COOLDOWN_MS = 60 * 1000;
+const EMAIL_VERIFICATION_MAX_ATTEMPTS = 5;
 
 export function hashPasswordResetCode(userId: string, code: string): string {
     return createHmac("sha256", env.REFRESH_TOKEN_SECRET)
         .update(`password-reset-code:${userId}:${code}`)
         .digest("hex");
+}
+
+export function hashEmailVerificationCode(userId: string, code: string): string {
+    return createHmac("sha256", env.REFRESH_TOKEN_SECRET)
+        .update(`email-verification-code:${userId}:${code}`)
+        .digest("hex");
+}
+
+function generateSixDigitCode(): string {
+    return randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
+
+function isMailConfigured(): boolean {
+    return Boolean(env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM);
+}
+
+function createMailTransporter() {
+    return nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: {
+            user: env.SMTP_USER,
+            pass: env.SMTP_PASS,
+        },
+    });
 }
 
 export function toAuthUser(user: {
@@ -285,7 +315,228 @@ function ensurePasswordUser(passwordHash: string | null): string {
     return passwordHash;
 }
 
-export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
+type VerificationCodeRecipient = {
+    id: string;
+    name: string;
+    email: string;
+};
+
+/**
+ * Gera um novo código de 6 dígitos (substituindo o anterior) e envia por e-mail.
+ * Retorna `false` se o e-mail não pôde ser enviado.
+ */
+async function issueEmailVerificationCode(
+    user: VerificationCodeRecipient,
+    logger: FastifyBaseLogger,
+): Promise<boolean> {
+    const now = new Date();
+    const code = generateSixDigitCode();
+    const codeHash = hashEmailVerificationCode(user.id, code);
+    const expiresAt = new Date(now.getTime() + EMAIL_VERIFICATION_CODE_TTL_MS);
+
+    await prisma.verificationToken.upsert({
+        where: { user_id: user.id },
+        create: {
+            user_id: user.id,
+            token: codeHash,
+            expires_at: expiresAt,
+            created_at: now,
+        },
+        update: {
+            token: codeHash,
+            expires_at: expiresAt,
+            created_at: now,
+            attempts: 0,
+        },
+    });
+
+    if (!isMailConfigured()) {
+        if (env.NODE_ENV !== "production") {
+            logger.warn(
+                { userId: user.id, email: user.email, code },
+                "SMTP não configurado: código de verificação de e-mail (somente desenvolvimento)",
+            );
+            return true;
+        }
+
+        logger.error(
+            { userId: user.id },
+            "SMTP não configurado: não foi possível enviar o código de verificação",
+        );
+        return false;
+    }
+
+    const transporter = createMailTransporter();
+    const emailContent = buildVerificationCodeEmail(user.name, code);
+
+    try {
+        await transporter.sendMail({
+            from: env.SMTP_FROM,
+            to: user.email,
+            subject: emailContent.subject,
+            text: emailContent.text,
+            html: emailContent.html,
+        });
+        return true;
+    } catch (error) {
+        logger.error(
+            { err: error, userId: user.id },
+            "Email verification code delivery failed",
+        );
+        return false;
+    } finally {
+        transporter.close();
+    }
+}
+
+export async function resendEmailVerificationCode(
+    userId: string,
+    logger: FastifyBaseLogger,
+): Promise<{ retryAfterSeconds: number }> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+        throw new AuthError(
+            "Authenticated user not found",
+            401,
+            "AUTH_USER_NOT_FOUND",
+        );
+    }
+
+    if (user.is_email_verified) {
+        throw new AuthError(
+            "Seu e-mail já foi verificado.",
+            409,
+            "AUTH_EMAIL_ALREADY_VERIFIED",
+        );
+    }
+
+    const currentRecord = await prisma.verificationToken.findUnique({
+        where: { user_id: user.id },
+    });
+
+    if (currentRecord) {
+        const elapsed = Date.now() - currentRecord.created_at.getTime();
+
+        if (elapsed < EMAIL_VERIFICATION_RESEND_COOLDOWN_MS) {
+            const seconds = Math.ceil(
+                (EMAIL_VERIFICATION_RESEND_COOLDOWN_MS - elapsed) / 1000,
+            );
+            throw new AuthError(
+                `Aguarde ${seconds}s para solicitar um novo código.`,
+                429,
+                "AUTH_VERIFICATION_CODE_COOLDOWN",
+            );
+        }
+    }
+
+    const sent = await issueEmailVerificationCode(user, logger);
+
+    if (!sent) {
+        throw new AuthError(
+            "Não foi possível enviar o código agora. Tente novamente em instantes.",
+            503,
+            "AUTH_VERIFICATION_EMAIL_UNAVAILABLE",
+        );
+    }
+
+    return {
+        retryAfterSeconds: EMAIL_VERIFICATION_RESEND_COOLDOWN_MS / 1000,
+    };
+}
+
+export async function verifyEmailCode(
+    userId: string,
+    code: string,
+): Promise<AuthUser> {
+    const invalidCodeError = () =>
+        new AuthError(
+            "O código é inválido ou expirou.",
+            400,
+            "AUTH_INVALID_VERIFICATION_CODE",
+        );
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+        throw new AuthError(
+            "Authenticated user not found",
+            401,
+            "AUTH_USER_NOT_FOUND",
+        );
+    }
+
+    if (user.is_email_verified) {
+        return toAuthUser(user);
+    }
+
+    const record = await prisma.verificationToken.findUnique({
+        where: { user_id: user.id },
+    });
+    const now = new Date();
+
+    if (!record || record.expires_at <= now) {
+        throw invalidCodeError();
+    }
+
+    if (record.attempts >= EMAIL_VERIFICATION_MAX_ATTEMPTS) {
+        throw new AuthError(
+            "Muitas tentativas incorretas. Solicite um novo código.",
+            429,
+            "AUTH_VERIFICATION_CODE_TOO_MANY_ATTEMPTS",
+        );
+    }
+
+    // Conta a tentativa antes de comparar (evita força bruta concorrente)
+    const attempted = await prisma.verificationToken.updateMany({
+        where: {
+            id: record.id,
+            token: record.token,
+            attempts: { lt: EMAIL_VERIFICATION_MAX_ATTEMPTS },
+            expires_at: { gt: now },
+        },
+        data: { attempts: { increment: 1 } },
+    });
+
+    if (attempted.count !== 1) {
+        throw invalidCodeError();
+    }
+
+    const expectedHash = Buffer.from(
+        hashEmailVerificationCode(user.id, code),
+        "hex",
+    );
+    const storedHash = Buffer.from(record.token, "hex");
+
+    if (
+        expectedHash.length !== storedHash.length ||
+        !timingSafeEqual(expectedHash, storedHash)
+    ) {
+        throw invalidCodeError();
+    }
+
+    const updatedUser = await prisma.$transaction(async (transaction) => {
+        const consumed = await transaction.verificationToken.deleteMany({
+            where: { id: record.id, token: record.token },
+        });
+
+        if (consumed.count !== 1) {
+            throw invalidCodeError();
+        }
+
+        return transaction.user.update({
+            where: { id: user.id },
+            data: { is_email_verified: true, email_verified_at: now },
+        });
+    });
+
+    return toAuthUser(updatedUser);
+}
+
+export async function registerUser(
+    input: RegisterBody,
+    logger: FastifyBaseLogger,
+): Promise<AuthResponse> {
     const normalizedEmail = input.email.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
         where: { email: normalizedEmail },
@@ -307,19 +558,8 @@ export async function registerUser(input: RegisterBody): Promise<AuthResponse> {
         },
     });
 
-    const verificationToken = randomBytes(32).toString("hex");
-    await prisma.verificationToken.create({
-        data: {
-            user_id: user.id,
-            token: verificationToken,
-            expires_at: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
-        },
-    });
-
-    // TODO: Configurar serviço real de envio de e-mail (Resend, SES) direcionando ao Frontend
-    console.log(
-        `\n[MOCK EMAIL] Enviar e-mail para: ${user.email}\nLink Frontend: http://localhost:5173/verificar-email?token=${verificationToken}\n`,
-    );
+    // Uma falha no envio não impede o cadastro: o usuário pode pedir reenvio.
+    await issueEmailVerificationCode(user, logger);
 
     const tokens = buildTokens(user);
     await storeRefreshToken(user.id, tokens.refreshToken);
@@ -424,15 +664,7 @@ export async function requestPasswordReset(
         }
     }
 
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: {
-            user: env.SMTP_USER,
-            pass: env.SMTP_PASS,
-        },
-    });
+    const transporter = createMailTransporter();
     const emailContent = buildPasswordResetEmail(user.name, code);
 
     try {
@@ -691,29 +923,6 @@ export async function refreshSession(
         user: toAuthUser(tokenRecord.user),
         tokens,
     };
-}
-
-export async function verifyEmail(token: string): Promise<void> {
-    const record = await prisma.verificationToken.findUnique({
-        where: { token },
-    });
-
-    if (!record || record.expires_at < new Date()) {
-        throw new AuthError(
-            "Invalid or expired verification token",
-            400,
-            "AUTH_INVALID_VERIFICATION_TOKEN",
-        );
-    }
-
-    await prisma.user.update({
-        where: { id: record.user_id },
-        data: { is_email_verified: true },
-    });
-
-    await prisma.verificationToken.delete({
-        where: { id: record.id },
-    });
 }
 
 export async function logoutUser(input: LogoutBody): Promise<void> {

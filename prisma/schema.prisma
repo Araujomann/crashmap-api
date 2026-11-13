@@ -100,14 +100,16 @@ model AdministrativeNotice {
 
 model VerificationToken {
   id String @id @default(uuid())
+  // HMAC do código de 6 dígitos (o código em si nunca é salvo)
   token String @unique
   user_id String
   expires_at DateTime
   created_at DateTime @default(now())
+  attempts Int @default(0)
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id])
+  @@unique([user_id])
   @@index([token])
 }
 

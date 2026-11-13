@@ -40,7 +40,7 @@ export interface LogoutBody {
 }
 
 export interface VerifyEmailBody {
-    token: string;
+    code: string;
 }
 
 export interface ForgotPasswordBody {

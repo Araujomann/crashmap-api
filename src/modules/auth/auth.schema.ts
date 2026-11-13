@@ -12,27 +12,26 @@ export const registerBodySchema = {
 export const verifyEmailBodySchema = {
     type: "object",
     additionalProperties: false,
-    required: ["token"],
+    required: ["code"],
     properties: {
-        token: { type: "string", minLength: 10 },
+        code: { type: "string", pattern: "^\\d{6}$" },
     },
 } as const;
 
-export const verifyEmailQuerySchema = {
+export const resendVerificationResponseSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["token"],
+    required: ["data"],
     properties: {
-        token: { type: "string", minLength: 10 },
-    },
-} as const;
-
-export const resendVerificationBodySchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["email"],
-    properties: {
-        email: { type: "string", format: "email", maxLength: 255 },
+        data: {
+            type: "object",
+            additionalProperties: false,
+            required: ["message", "retryAfterSeconds"],
+            properties: {
+                message: { type: "string" },
+                retryAfterSeconds: { type: "integer" },
+            },
+        },
     },
 } as const;
 

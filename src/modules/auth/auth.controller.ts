@@ -11,9 +11,8 @@ import {
     resetPasswordBodySchema,
     simpleMessageResponseSchema,
     verifyEmailBodySchema,
-    verifyEmailQuerySchema,
     verifyPasswordResetCodeBodySchema,
-    resendVerificationBodySchema,
+    resendVerificationResponseSchema,
 } from "./auth.schema.js";
 import {
     loginUser,
@@ -21,11 +20,11 @@ import {
     requestPasswordReset,
     refreshSession,
     registerUser,
+    resendEmailVerificationCode,
     resetPassword,
-    verifyEmail,
+    verifyEmailCode,
     verifyPasswordResetCode,
 } from "./auth.service.js";
-import { resendVerificationEmail } from "./resend-verification-email.js";
 import { requireAuthenticatedUser } from "./auth.guard.js";
 import type {
     LoginBody,
@@ -116,7 +115,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
             },
         },
         async (request, reply) => {
-            const result = await registerUser(request.body);
+            const result = await registerUser(request.body, request.log);
 
             return reply.code(201).send({ data: result });
         },
@@ -125,59 +124,50 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: VerifyEmailBody }>(
         "/verify-email",
         {
+            preHandler: requireAuthenticatedUser,
             schema: {
                 tags: ['Auth'],
-                summary: 'Verifica e-mail do usuário via token (POST)',
+                summary: 'Verifica o e-mail do usuário autenticado com o código de 6 dígitos',
+                security: [{ bearerAuth: [] }],
                 body: verifyEmailBodySchema,
                 response: {
-                    200: simpleMessageResponseSchema,
+                    200: meResponseSchema,
                 },
             },
         },
         async (request, reply) => {
-            await verifyEmail(request.body.token);
+            const user = await verifyEmailCode(
+                request.authUser!.id,
+                request.body.code,
+            );
 
-            return reply.code(200).send({ data: { message: "Email successfully verified!" } });
+            return reply.code(200).send({ data: user });
         },
     );
 
-    app.get<{ Querystring: { token: string } }>(
-        "/verify-email",
-        {
-            schema: {
-                tags: ['Auth'],
-                summary: 'Verifica e-mail do usuário via token (GET para navegador)',
-                querystring: verifyEmailQuerySchema,
-                response: {
-                    200: simpleMessageResponseSchema,
-                },
-            },
-        },
-        async (request, reply) => {
-            await verifyEmail(request.query.token);
-
-            return reply.code(200).send({ data: { message: "Email successfully verified!" } });
-        },
-    );
-
-    app.post<{ Body: { email: string } }>(
+    app.post(
         "/resend-verification",
         {
+            preHandler: requireAuthenticatedUser,
             schema: {
                 tags: ['Auth'],
-                summary: 'Reenvia e-mail de verificação',
-                body: resendVerificationBodySchema,
+                summary: 'Envia um novo código de verificação para o e-mail do usuário autenticado',
+                security: [{ bearerAuth: [] }],
                 response: {
-                    200: simpleMessageResponseSchema,
+                    200: resendVerificationResponseSchema,
                 },
             },
         },
         async (request, reply) => {
-            await resendVerificationEmail(request.body.email, reply.log);
+            const { retryAfterSeconds } = await resendEmailVerificationCode(
+                request.authUser!.id,
+                request.log,
+            );
 
             return reply.code(200).send({
                 data: {
-                    message: "Se houver uma conta associada a este e-mail que ainda não foi verificada, enviaremos um novo e-mail de verificação.",
+                    message: "Enviamos um novo código para o seu e-mail.",
+                    retryAfterSeconds,
                 },
             });
         },
