@@ -122,6 +122,7 @@ async function deliver(
         {
             to: invite.email,
             inviteUrl: buildInviteUrl(token),
+            inviteCode: token,
             inviterName: actor.name,
             expiresAt: invite.expires_at,
         },
