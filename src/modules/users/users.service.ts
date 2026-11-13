@@ -1,8 +1,9 @@
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
-import { toAuthUser } from "../auth/auth.service.js";
+import { toAuthUser, verifyPassword } from "../auth/auth.service.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import type {
+    DeleteMeBody,
     MyReport,
     MyReportsQuery,
     MyReportsResult,
@@ -127,4 +128,49 @@ export async function updateMe(
     });
 
     return toAuthUser(updatedUser);
+}
+
+/**
+ * Exclui permanentemente a conta do usuário corrente.
+ *
+ * - Contas com senha precisam reconfirmá-la (reautenticação).
+ * - Contas da equipe (moderador/admin) não podem ser excluídas por aqui: o
+ *   histórico de moderação e os avisos administrativos dependem delas.
+ * - Tokens, comentários, votos e imagens são removidos em cascata; os relatos
+ *   permanecem no mapa sem autor (`created_by_id` → NULL).
+ */
+export async function deleteMe(
+    userId: string,
+    input: DeleteMeBody = {},
+): Promise<void> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+        throw new AppError("User not found", 404, "USER_NOT_FOUND");
+    }
+
+    if (user.role !== "user") {
+        throw new AppError(
+            "Staff accounts cannot be deleted through the app",
+            403,
+            "STAFF_ACCOUNT_DELETION_FORBIDDEN",
+        );
+    }
+
+    if (user.password_hash) {
+        if (!input.password) {
+            throw new AppError(
+                "Password is required to delete the account",
+                400,
+                "PASSWORD_REQUIRED",
+            );
+        }
+
+        if (!verifyPassword(input.password, user.password_hash)) {
+            // 403 (e não 401) para não disparar a renovação de sessão no app.
+            throw new AppError("Invalid password", 403, "INVALID_PASSWORD");
+        }
+    }
+
+    await prisma.user.delete({ where: { id: userId } });
 }

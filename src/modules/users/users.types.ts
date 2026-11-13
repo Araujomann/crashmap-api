@@ -4,6 +4,10 @@ export interface UpdateMeBody {
     name: string;
 }
 
+export interface DeleteMeBody {
+    password?: string;
+}
+
 export interface UserGamificationStats {
     approved_reports_count: number;
     received_trust_votes_count: number;
