@@ -7,85 +7,21 @@ import {
 import {
     createAdministrativeNotice,
     listAdministrativeNotices,
-    MAX_ADMINISTRATIVE_NOTICE_LENGTH,
 } from "./administrative-notices.service.js";
-
-interface RegisterPushTokenBody {
-    token: string;
-    platform: "android" | "ios";
-}
-
-interface UnregisterPushTokenBody {
-    token: string;
-}
-
-interface AdministrativeNoticeBody {
-    message: string;
-}
-
-const administrativeNoticeSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["id", "message", "created_at"],
-    properties: {
-        id: { type: "string" },
-        message: { type: "string" },
-        created_at: { type: "string", format: "date-time" },
-    },
-} as const;
-
-const administrativeNoticesResponseSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["data"],
-    properties: {
-        data: {
-            type: "array",
-            items: administrativeNoticeSchema,
-        },
-    },
-} as const;
-
-const administrativeNoticeResponseSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["data"],
-    properties: {
-        data: administrativeNoticeSchema,
-    },
-} as const;
-
-const administrativeNoticeBodySchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["message"],
-    properties: {
-        message: {
-            type: "string",
-            minLength: 1,
-            maxLength: MAX_ADMINISTRATIVE_NOTICE_LENGTH,
-        },
-    },
-} as const;
-
-const registerPushTokenBodySchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["token", "platform"],
-    properties: {
-        token: { type: "string", minLength: 1, maxLength: 512 },
-        platform: { type: "string", enum: ["android", "ios"] },
-    },
-} as const;
-
-const unregisterPushTokenBodySchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["token"],
-    properties: {
-        token: { type: "string", minLength: 1, maxLength: 512 },
-    },
-} as const;
+import {
+    administrativeNoticeBodySchema,
+    administrativeNoticeResponseSchema,
+    administrativeNoticesResponseSchema,
+    registerPushTokenBodySchema,
+    registerPushTokenResponseSchema,
+    unregisterPushTokenBodySchema,
+    unregisterPushTokenResponseSchema,
+} from "./notifications.schema.js";
+import type {
+    AdministrativeNoticeBody,
+    RegisterPushTokenBody,
+    UnregisterPushTokenBody,
+} from "./notifications.types.js";
 
 export const notificationsRoutes: FastifyPluginAsync = async (app) => {
     app.get(
@@ -137,23 +73,7 @@ export const notificationsRoutes: FastifyPluginAsync = async (app) => {
                 summary: "Registrar um dispositivo para notificações push",
                 security: [{ bearerAuth: [] }],
                 body: registerPushTokenBodySchema,
-                response: {
-                    200: {
-                        type: "object",
-                        additionalProperties: false,
-                        required: ["data"],
-                        properties: {
-                            data: {
-                                type: "object",
-                                additionalProperties: false,
-                                required: ["registered"],
-                                properties: {
-                                    registered: { type: "boolean" },
-                                },
-                            },
-                        },
-                    },
-                },
+                response: { 200: registerPushTokenResponseSchema },
             },
         },
         async (request, reply) => {
@@ -176,23 +96,7 @@ export const notificationsRoutes: FastifyPluginAsync = async (app) => {
                 summary: "Remover um dispositivo das notificações push",
                 security: [{ bearerAuth: [] }],
                 body: unregisterPushTokenBodySchema,
-                response: {
-                    200: {
-                        type: "object",
-                        additionalProperties: false,
-                        required: ["data"],
-                        properties: {
-                            data: {
-                                type: "object",
-                                additionalProperties: false,
-                                required: ["removed"],
-                                properties: {
-                                    removed: { type: "boolean" },
-                                },
-                            },
-                        },
-                    },
-                },
+                response: { 200: unregisterPushTokenResponseSchema },
             },
         },
         async (request, reply) => {

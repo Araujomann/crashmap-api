@@ -1,9 +1,16 @@
-import { createHmac, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { FastifyBaseLogger } from "fastify";
 import { env } from "../../shared/config/env.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
-import { toAuthUser } from "../auth/auth.service.js";
+import { hmacSha256Hex } from "../../shared/security/crypto.js";
+import { normalizeEmail } from "../../shared/utils/email.js";
+import {
+    buildPaginationMeta,
+    resolvePagination,
+    type PaginationMeta,
+} from "../../shared/http/pagination.js";
+import { toAuthUser } from "../auth/auth-user.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { recordAudit, type AuditContext } from "../audit/audit.service.js";
 import { getSettings } from "../settings/settings.service.js";
@@ -23,17 +30,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 
 export function hashInviteToken(token: string) {
-    return createHmac("sha256", env.REFRESH_TOKEN_SECRET)
-        .update(`moderator-invite:${token}`)
-        .digest("hex");
+    return hmacSha256Hex(env.REFRESH_TOKEN_SECRET, `moderator-invite:${token}`);
 }
 
 function generateInviteToken() {
     return randomBytes(32).toString("base64url");
-}
-
-export function normalizeEmail(email: string) {
-    return email.trim().toLowerCase();
 }
 
 const personSelect = { select: { id: true, name: true } } as const;
@@ -133,10 +134,9 @@ async function deliver(
 
 export async function listInvites(
     query: ListInvitesQuery = {},
-): Promise<{ data: ModeratorInvite[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
+): Promise<{ data: ModeratorInvite[]; pagination: PaginationMeta }> {
     const now = new Date();
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(50, Math.max(1, query.limit ?? 20));
+    const pagination = resolvePagination(query, 20);
     const where = statusWhere(query.status, now);
 
     const [total, invites] = await prisma.$transaction([
@@ -145,19 +145,14 @@ export async function listInvites(
             where,
             include: inviteInclude,
             orderBy: [{ created_at: "desc" }, { id: "desc" }],
-            skip: (page - 1) * limit,
-            take: limit,
+            skip: pagination.skip,
+            take: pagination.limit,
         }),
     ]);
 
     return {
         data: invites.map(toInvite),
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.max(1, Math.ceil(total / limit)),
-        },
+        pagination: buildPaginationMeta(pagination, total),
     };
 }
 

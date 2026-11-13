@@ -18,14 +18,18 @@ import {
 import {
     loginUser,
     logoutUser,
-    requestPasswordReset,
     refreshSession,
     registerUser,
-    resendEmailVerificationCode,
-    resetPassword,
-    verifyEmailCode,
-    verifyPasswordResetCode,
 } from "./auth.service.js";
+import {
+    resendEmailVerificationCode,
+    verifyEmailCode,
+} from "./email-verification.service.js";
+import {
+    requestPasswordReset,
+    resetPassword,
+    verifyPasswordResetCode,
+} from "./password-reset.service.js";
 import { requireAuthenticatedUser } from "./auth.guard.js";
 import type {
     LoginBody,

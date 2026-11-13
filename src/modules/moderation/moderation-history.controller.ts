@@ -1,5 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
-import { buildDataResponseSchema } from "../../shared/http/api-response.js";
+import {
+    buildDataResponseSchema,
+    paginationMetaSchema,
+} from "../../shared/http/api-response.js";
 import {
     listModerationHistory,
     listModerationHistoryModerators,
@@ -66,17 +69,7 @@ const historyListResponseSchema = {
     required: ["data", "pagination"],
     properties: {
         data: { type: "array", items: historyEntrySchema },
-        pagination: {
-            type: "object",
-            additionalProperties: false,
-            required: ["page", "limit", "total", "totalPages"],
-            properties: {
-                page: { type: "integer" },
-                limit: { type: "integer" },
-                total: { type: "integer" },
-                totalPages: { type: "integer" },
-            },
-        },
+        pagination: paginationMetaSchema,
     },
 } as const;
 

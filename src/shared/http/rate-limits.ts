@@ -1,6 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { RateLimitOptions } from "@fastify/rate-limit";
 import { AppError } from "../errors/app-error.js";
+import { normalizeEmail } from "../utils/email.js";
 
 /**
  * Limites por rota sensível. A contagem é por IP do cliente; com
@@ -10,7 +11,7 @@ import { AppError } from "../errors/app-error.js";
  */
 function emailFromBody(request: FastifyRequest) {
     const body = request.body as { email?: unknown } | undefined;
-    return typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    return typeof body?.email === "string" ? normalizeEmail(body.email) : "";
 }
 
 export const RATE_LIMITS = {

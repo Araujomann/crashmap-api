@@ -2,6 +2,7 @@ import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { recordAudit, type AuditContext } from "../audit/audit.service.js";
+import { revokeAllSessions } from "../auth/sessions.js";
 import type { TeamMember } from "./team.types.js";
 
 /** Moderadores e administradores ativos. */
@@ -92,10 +93,11 @@ export async function revokeModerator(
             );
         }
 
-        const sessions = await transaction.refreshToken.updateMany({
-            where: { user_id: targetId, revoked_at: null },
-            data: { revoked_at: now },
-        });
+        const revokedSessions = await revokeAllSessions(
+            transaction,
+            targetId,
+            now,
+        );
 
         await recordAudit(
             transaction,
@@ -109,7 +111,7 @@ export async function revokeModerator(
                     name: target.name,
                     email: target.email,
                     previous_role: "moderator",
-                    revoked_sessions: sessions.count,
+                    revoked_sessions: revokedSessions,
                 },
             },
             context,

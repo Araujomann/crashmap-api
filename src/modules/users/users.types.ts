@@ -1,4 +1,5 @@
 import type { AccidentModerationStatus } from "../accidents/accidents.types.js";
+import type { UserRole } from "../auth/auth.types.js";
 
 export interface UpdateMeBody {
     name: string;
@@ -53,4 +54,31 @@ export interface MyReportsResult {
         total: number;
         totalPages: number;
     };
+}
+
+export interface AdminUsersQuery {
+    search?: string;
+    role?: UserRole;
+    status?: "active" | "suspended";
+    page?: number;
+    limit?: number;
+}
+
+export interface AdminUserSummary {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    is_email_verified: boolean;
+    created_at: Date;
+    suspended_at: Date | null;
+    suspended_reason: string | null;
+    suspended_by: { id: string; name: string } | null;
+}
+
+export interface AdminUserDetail extends AdminUserSummary {
+    reports_count: number;
+    comments_count: number;
+    decisions_count: number;
+    active_sessions: number;
 }

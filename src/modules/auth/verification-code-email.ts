@@ -1,11 +1,4 @@
-function escapeHtml(value: string) {
-  return value
-    .split("&").join("&amp;")
-    .split("<").join("&lt;")
-    .split(">").join("&gt;")
-    .split('"').join("&quot;")
-    .split("'").join("&#39;");
-}
+import { escapeHtml } from "../../shared/utils/html.js";
 
 export function buildVerificationCodeEmail(name: string, code: string) {
   const safeName = escapeHtml(name);

@@ -1,6 +1,11 @@
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
-import { toAuthUser, verifyPassword } from "../auth/auth.service.js";
+import {
+    buildPaginationMeta,
+    resolvePagination,
+} from "../../shared/http/pagination.js";
+import { toAuthUser } from "../auth/auth-user.js";
+import { verifyPassword } from "../auth/password.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import type {
     DeleteMeBody,
@@ -52,8 +57,7 @@ export async function getMyReports(
     userId: string,
     query: MyReportsQuery = {},
 ): Promise<MyReportsResult> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(50, Math.max(1, query.limit ?? 20));
+    const pagination = resolvePagination(query, 20);
     const where = {
         created_by_id: userId,
         source: "APP" as const,
@@ -92,19 +96,14 @@ export async function getMyReports(
                 },
             },
             orderBy: { created_at: "desc" },
-            skip: (page - 1) * limit,
-            take: limit,
+            skip: pagination.skip,
+            take: pagination.limit,
         }),
     ]);
 
     return {
         data: reports satisfies MyReport[],
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.max(1, Math.ceil(total / limit)),
-        },
+        pagination: buildPaginationMeta(pagination, total),
     };
 }
 

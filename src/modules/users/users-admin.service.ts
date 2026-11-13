@@ -1,34 +1,17 @@
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
-import type { AuthUser, UserRole } from "../auth/auth.types.js";
+import {
+    buildPaginationMeta,
+    resolvePagination,
+} from "../../shared/http/pagination.js";
+import type { AuthUser } from "../auth/auth.types.js";
 import { recordAudit, type AuditContext } from "../audit/audit.service.js";
-
-export interface AdminUsersQuery {
-    search?: string;
-    role?: UserRole;
-    status?: "active" | "suspended";
-    page?: number;
-    limit?: number;
-}
-
-export interface AdminUserSummary {
-    id: string;
-    name: string;
-    email: string;
-    role: UserRole;
-    is_email_verified: boolean;
-    created_at: Date;
-    suspended_at: Date | null;
-    suspended_reason: string | null;
-    suspended_by: { id: string; name: string } | null;
-}
-
-export interface AdminUserDetail extends AdminUserSummary {
-    reports_count: number;
-    comments_count: number;
-    decisions_count: number;
-    active_sessions: number;
-}
+import { revokeAllSessions } from "../auth/sessions.js";
+import type {
+    AdminUserDetail,
+    AdminUserSummary,
+    AdminUsersQuery,
+} from "./users.types.js";
 
 const summarySelect = {
     id: true,
@@ -44,8 +27,7 @@ const summarySelect = {
 
 /** Contas ativas ou suspensas. Contas anonimizadas não aparecem. */
 export async function listUsers(query: AdminUsersQuery = {}) {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(50, Math.max(1, query.limit ?? 20));
+    const pagination = resolvePagination(query, 20);
     const search = query.search?.trim();
 
     const where = {
@@ -72,19 +54,14 @@ export async function listUsers(query: AdminUsersQuery = {}) {
             where,
             select: summarySelect,
             orderBy: [{ created_at: "desc" }, { id: "desc" }],
-            skip: (page - 1) * limit,
-            take: limit,
+            skip: pagination.skip,
+            take: pagination.limit,
         }),
     ]);
 
     return {
         data: users satisfies AdminUserSummary[],
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.max(1, Math.ceil(total / limit)),
-        },
+        pagination: buildPaginationMeta(pagination, total),
     };
 }
 
@@ -176,10 +153,11 @@ export async function suspendUser(
             throw new AppError("Esta conta já está suspensa", 409, "USER_ALREADY_SUSPENDED");
         }
 
-        const sessions = await transaction.refreshToken.updateMany({
-            where: { user_id: targetId, revoked_at: null },
-            data: { revoked_at: now },
-        });
+        const revokedSessions = await revokeAllSessions(
+            transaction,
+            targetId,
+            now,
+        );
 
         await recordAudit(
             transaction,
@@ -193,7 +171,7 @@ export async function suspendUser(
                     name: target.name,
                     email: target.email,
                     role: target.role,
-                    revoked_sessions: sessions.count,
+                    revoked_sessions: revokedSessions,
                 },
             },
             context,
@@ -253,10 +231,7 @@ export async function revokeUserSessions(
     const target = await loadTarget(actor, targetId, "encerrar as sessões de");
 
     return prisma.$transaction(async (transaction) => {
-        const sessions = await transaction.refreshToken.updateMany({
-            where: { user_id: targetId, revoked_at: null },
-            data: { revoked_at: new Date() },
-        });
+        const revokedSessions = await revokeAllSessions(transaction, targetId);
 
         await recordAudit(
             transaction,
@@ -268,12 +243,12 @@ export async function revokeUserSessions(
                 metadata: {
                     name: target.name,
                     email: target.email,
-                    revoked_sessions: sessions.count,
+                    revoked_sessions: revokedSessions,
                 },
             },
             context,
         );
 
-        return { revoked_sessions: sessions.count };
+        return { revoked_sessions: revokedSessions };
     });
 }

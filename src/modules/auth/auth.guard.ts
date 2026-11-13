@@ -1,11 +1,8 @@
 import type { preHandlerHookHandler } from "fastify";
 import { prisma } from "../../shared/database/prisma.js";
-import {
-    AuthError,
-    ensureNotSuspended,
-    toAuthUser,
-    verifyAccessToken,
-} from "./auth.service.js";
+import { AuthError } from "./auth.errors.js";
+import { ensureNotSuspended, toAuthUser } from "./auth-user.js";
+import { verifyAccessToken } from "./tokens.js";
 import { can, type Permission } from "./permissions.js";
 
 function readBearerToken(authorizationHeader: string | undefined): string {

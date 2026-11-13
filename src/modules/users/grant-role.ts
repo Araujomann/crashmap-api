@@ -1,6 +1,8 @@
 import { prisma } from "../../shared/database/prisma.js";
+import { normalizeEmail } from "../../shared/utils/email.js";
 import type { UserRole } from "../auth/auth.types.js";
-import { isUserRole } from "../auth/auth.service.js";
+import { isUserRole } from "../auth/auth-user.js";
+import { revokeAllSessions } from "../auth/sessions.js";
 import { recordAudit } from "../audit/audit.service.js";
 
 export class GrantRoleError extends Error {
@@ -29,7 +31,7 @@ export async function grantRole(
     rawRole: string,
     operator: string,
 ): Promise<GrantRoleResult> {
-    const email = rawEmail.trim().toLowerCase();
+    const email = normalizeEmail(rawEmail);
     if (!isUserRole(rawRole)) {
         throw new GrantRoleError(
             `Papel inválido: "${rawRole}". Use user, moderator ou admin.`,
@@ -83,11 +85,7 @@ export async function grantRole(
         const rank: Record<UserRole, number> = { user: 0, moderator: 1, admin: 2 };
         let revokedSessions = 0;
         if (rank[newRole] < rank[user.role]) {
-            const revoked = await transaction.refreshToken.updateMany({
-                where: { user_id: user.id, revoked_at: null },
-                data: { revoked_at: new Date() },
-            });
-            revokedSessions = revoked.count;
+            revokedSessions = await revokeAllSessions(transaction, user.id);
         }
 
         await recordAudit(

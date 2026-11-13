@@ -1,3 +1,4 @@
+import { paginationMetaSchema } from "../../shared/http/api-response.js";
 import { authUserSchema } from "../auth/auth.schema.js";
 
 const personSchema = {
@@ -57,17 +58,7 @@ export const inviteListResponseSchema = {
     required: ["data", "pagination"],
     properties: {
         data: { type: "array", items: inviteSchema },
-        pagination: {
-            type: "object",
-            additionalProperties: false,
-            required: ["page", "limit", "total", "totalPages"],
-            properties: {
-                page: { type: "integer" },
-                limit: { type: "integer" },
-                total: { type: "integer" },
-                totalPages: { type: "integer" },
-            },
-        },
+        pagination: paginationMetaSchema,
     },
 } as const;
 

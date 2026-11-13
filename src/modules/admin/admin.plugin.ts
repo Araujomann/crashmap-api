@@ -1,11 +1,9 @@
 import type { FastifyPluginAsync, preHandlerHookHandler } from "fastify";
 import { staff } from "../auth/auth.guard.js";
 import { moderationHistoryRoutes } from "../moderation/moderation-history.controller.js";
-import {
-    auditLogRoutes,
-    settingsRoutes,
-    usersAdminRoutes,
-} from "./admin-panel.controller.js";
+import { auditLogRoutes } from "../audit/audit-log.controller.js";
+import { settingsRoutes } from "../settings/settings.controller.js";
+import { usersAdminRoutes } from "../users/users-admin.controller.js";
 import {
     moderatorInvitesAdminRoutes,
     moderatorsAdminRoutes,

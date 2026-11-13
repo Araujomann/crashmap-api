@@ -1,18 +1,10 @@
 import type { FastifyBaseLogger } from "fastify";
 import { env } from "../../shared/config/env.js";
 import {
-    createMailTransporter,
     isMailConfigured,
-} from "../auth/auth.service.js";
-
-function escapeHtml(value: string) {
-    return value
-        .split("&").join("&amp;")
-        .split("<").join("&lt;")
-        .split(">").join("&gt;")
-        .split('"').join("&quot;")
-        .split("'").join("&#39;");
-}
+    sendMail,
+} from "../../shared/services/mail/mailer.js";
+import { escapeHtml } from "../../shared/utils/html.js";
 
 export interface ModeratorInviteMessage {
     to: string;
@@ -139,16 +131,9 @@ const smtpMailer: ModeratorInviteMailer = async (message, logger) => {
         return false;
     }
 
-    const transporter = createMailTransporter();
     const content = buildModeratorInviteEmail(message);
     try {
-        const info = await transporter.sendMail({
-            from: env.SMTP_FROM,
-            to: message.to,
-            subject: content.subject,
-            text: content.text,
-            html: content.html,
-        });
+        const info = await sendMail(message.to, content);
         const rejected = info.rejected.length > 0;
         // Resposta do servidor SMTP: "250 ... OK" quer dizer que o Gmail
         // aceitou a mensagem; se ela não chegar, o problema é na entrega
@@ -168,8 +153,6 @@ const smtpMailer: ModeratorInviteMailer = async (message, logger) => {
     } catch (error) {
         logger.error({ err: error }, "Moderator invite delivery failed");
         return false;
-    } finally {
-        transporter.close();
     }
 };
 

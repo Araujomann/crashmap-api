@@ -577,3 +577,76 @@ export const accidentIdParamsSchema = {
         id: { type: "string", format: "uuid" },
     },
 } as const;
+
+export const accidentModerationListQuerySchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        page: { type: "integer", minimum: 1 },
+        limit: { type: "integer", minimum: 1, maximum: 50 },
+        search: { type: "string" },
+        status: accidentModerationStatusSchema,
+        severity: accidentSeveritySchema,
+        sort: { type: "string", enum: ["newest", "oldest"] },
+    },
+} as const;
+
+export const accidentsMapQuerySchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        search: { type: "string" },
+        severity: accidentSeveritySchema,
+        classificacao: { type: "string", enum: ["com_vitima", "sem_vitima"] },
+        condicao_meteorologica: {
+            type: "string",
+            enum: ["ceu_claro", "chuva", "nublado", "garoa"],
+        },
+        source: { type: "string", enum: ["APP", "PRF"] },
+        source_year: { type: "number" },
+        from: { type: "string", format: "date-time" },
+        to: { type: "string", format: "date-time" },
+        minLat: { type: "number", minimum: -90, maximum: 90 },
+        maxLat: { type: "number", minimum: -90, maximum: 90 },
+        minLng: { type: "number", minimum: -180, maximum: 180 },
+        maxLng: { type: "number", minimum: -180, maximum: 180 },
+    },
+} as const;
+
+export const accidentCommentParamsSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["id", "commentId"],
+    properties: {
+        id: { type: "string", format: "uuid" },
+        commentId: { type: "string", format: "uuid" },
+    },
+} as const;
+
+export const accidentImageParamsSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["id", "imageId"],
+    properties: {
+        id: { type: "string", format: "uuid" },
+        imageId: { type: "string", format: "uuid" },
+    },
+} as const;
+
+export const accidentCommentResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: accidentCommentSchema,
+    },
+} as const;
+
+export const accidentImageResponseSchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["data"],
+    properties: {
+        data: accidentImageSchema,
+    },
+} as const;

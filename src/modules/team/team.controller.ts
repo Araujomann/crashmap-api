@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { bearerAuthSecurity as security } from "../../shared/http/api-response.js";
 import { RATE_LIMITS } from "../../shared/http/rate-limits.js";
 import {
     requireAuthenticatedUser,
@@ -35,7 +36,6 @@ import type {
 } from "./team.types.js";
 
 type IdParams = { Params: { id: string } };
-const security = [{ bearerAuth: [] }];
 
 // Registradas dentro de `adminPlugin` com prefixo /moderator-invites.
 export const moderatorInvitesAdminRoutes: FastifyPluginAsync = async (app) => {

@@ -16,26 +16,30 @@ Essa abordagem mantém o projeto organizado sem adicionar complexidade desnecess
 src/
 │
 ├── modules/
-│   ├── auth/
-│   ├── users/
-│   ├── accidents/
-│   ├── comments/
-│   ├── images/
-│   ├── moderation/
-│   ├── notifications/
-│   └── dashboard/
+│   ├── accidents/       relatos, mapa, estatísticas, moderação, comentários, imagens, confiança
+│   ├── admin/           monta as rotas de /admin (nega por padrão)
+│   ├── audit/           trilha de auditoria administrativa
+│   ├── auth/            cadastro, login, sessões, verificação de e-mail, recuperação de senha
+│   ├── health/          GET /health
+│   ├── moderation/      histórico de decisões de moderação
+│   ├── notifications/   avisos administrativos e push
+│   ├── settings/        configurações da plataforma
+│   ├── team/            convites e equipe de moderação
+│   └── users/           conta do usuário e gestão de contas (admin)
 │
 ├── shared/
-│   ├── config/
-│   ├── database/
-│   ├── middleware/
-│   ├── services/
-│   ├── utils/
-│   ├── errors/
-│   └── types/
+│   ├── config/          variáveis de ambiente
+│   ├── database/        cliente único do Prisma
+│   ├── errors/          AppError
+│   ├── http/            formatos de resposta, paginação, erros, limites, documentação
+│   ├── security/        HMAC, SHA-256, código de 6 dígitos
+│   ├── services/        integrações externas (mail, storage)
+│   ├── utils/           funções genéricas (HTML, e-mail, intervalo de datas)
+│   └── scripts/         tarefas de linha de comando (PRF, papéis)
 │
-├── app.ts
-└── server.ts
+├── types/               extensões de tipos do Fastify
+├── app.ts               monta a aplicação (plugins, erros, rotas)
+└── server.ts            sobe o servidor
 ```
 
 ---
@@ -88,7 +92,6 @@ Cada módulo pode possuir arquivos como:
 auth/
 ├── auth.controller.ts
 ├── auth.service.ts
-├── auth.routes.ts
 ├── auth.schema.ts
 └── auth.types.ts
 ```
@@ -97,13 +100,41 @@ Nem todos os módulos precisam possuir exatamente esses arquivos.
 
 Cada módulo terá apenas aquilo que realmente precisar.
 
+Quando um módulo cresce, ele é dividido por assunto, não por camada. Exemplo do módulo de acidentes:
+
+```text
+accidents/
+├── accidents.controller.ts          plugin de /accidents (leitura pública e CRUD)
+├── accident-moderation.controller.ts
+├── accident-comments.controller.ts
+├── accident-images.controller.ts
+├── accident-trust.controller.ts
+├── accidents.service.ts             leitura pública e CRUD do relato
+├── accident-moderation.service.ts
+├── accident-comments.service.ts
+├── accident-images.service.ts
+├── accident-trust.service.ts
+├── accidents.access.ts              quem pode gerenciar o conteúdo e auditoria de staff
+├── accidents.filters.ts             filtros reutilizados nas consultas
+├── accidents.mapper.ts              registro do banco → resposta da API
+├── accidents.schema.ts
+└── accidents.types.ts
+```
+
+Arquivos auxiliares opcionais:
+
+- `*.mapper.ts`: converte o registro do Prisma no formato da resposta;
+- `*.filters.ts`: monta trechos de `where` repetidos entre consultas;
+- `*.access.ts`: regras de acesso compartilhadas pelos services do módulo;
+- `*.errors.ts`: erros específicos do módulo.
+
 ---
 
 # Responsabilidade de cada arquivo
 
 ## Routes
 
-Responsável por registrar as rotas da API.
+No CrashMap, as rotas são registradas no próprio controller (o padrão de plugins do Fastify): cada `*.controller.ts` exporta um plugin, ou funções `registerXRoutes(app)`, que declaram método, caminho, guards (`preHandler`), schema e handler.
 
 Exemplo:
 
@@ -112,7 +143,7 @@ POST /login
 POST /register
 ```
 
-As rotas apenas encaminham a requisição para o controller.
+As rotas apenas encaminham a requisição para o service.
 
 Não possuem regra de negócio.
 
@@ -151,18 +182,18 @@ Sempre que houver lógica da aplicação, ela deverá ficar no service.
 
 ## Schema
 
-Responsável pela validação utilizando Zod.
+Responsável pela validação utilizando JSON Schema do Fastify: o mesmo schema valida a entrada (body, query, params), filtra a resposta e gera a documentação em `/docs`.
 
-Cada módulo possui seus próprios schemas.
+Cada módulo possui seus próprios schemas. Os controllers não declaram schemas inline: eles importam do `*.schema.ts` do módulo. Trechos usados por vários módulos (paginação, `security`, `:id` UUID) ficam em `shared/http/api-response.ts`.
 
 Exemplo:
 
 ```text
-LoginSchema
+loginBodySchema
 
-RegisterSchema
+registerBodySchema
 
-CreateAccidentSchema
+createAccidentBodySchema
 ```
 
 ---
@@ -339,6 +370,36 @@ Ela não deve decidir regras da aplicação.
 ## Duplicar código
 
 Sempre que uma funcionalidade puder ser utilizada por mais de um módulo, ela deverá ser movida para `shared`.
+
+---
+
+# Recursos compartilhados já disponíveis
+
+Antes de escrever de novo, use o que já existe:
+
+| Necessidade | Onde |
+|---|---|
+| Paginação (`page`, `limit`, `totalPages`) | `shared/http/pagination.ts` |
+| Schema da paginação, `security`, `:id` UUID | `shared/http/api-response.ts` |
+| Intervalo de dias em UTC (`from`/`to` inclusivos) | `shared/utils/date-range.ts` |
+| Normalizar e-mail | `shared/utils/email.ts` |
+| Escapar texto em templates de e-mail | `shared/utils/html.ts` |
+| HMAC, SHA-256, código de 6 dígitos | `shared/security/crypto.ts` |
+| Enviar e-mail | `shared/services/mail/mailer.ts` |
+| Encerrar todas as sessões de uma conta | `modules/auth/sessions.ts` (`revokeAllSessions`) |
+| Gravar auditoria administrativa | `modules/audit/audit.service.ts` (`recordAudit`) |
+
+---
+
+# Testes
+
+```bash
+pnpm test
+```
+
+Os testes de integração usam o banco do `.env` e apagam o que criam.
+
+O teste `tests/api-contract.test.ts` compara o contrato público (documento OpenAPI e tabela de rotas com seus hooks) com `tests/__snapshots__/api-contract.json`. Se ele falhar, o contrato mudou. Só regrave o snapshot (`UPDATE_API_CONTRACT=1 pnpm test`) quando a mudança for intencional.
 
 ---
 

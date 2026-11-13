@@ -1,5 +1,13 @@
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
+import {
+    dayRangeFilter,
+    resolveUtcDayRange,
+} from "../../shared/utils/date-range.js";
+import {
+    buildPaginationMeta,
+    resolvePagination,
+} from "../../shared/http/pagination.js";
 import type { AuditAction } from "./audit.service.js";
 
 export interface AuditLogQuery {
@@ -15,44 +23,21 @@ export interface AuditLogQuery {
     limit?: number;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function parseDay(value: string) {
-    const date = new Date(`${value}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime())) {
-        throw new AppError("Invalid date", 400, "INVALID_DATE_RANGE");
-    }
-    return date;
-}
-
 export async function listAuditLogs(query: AuditLogQuery = {}) {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(50, Math.max(1, query.limit ?? 25));
-    const from = query.from ? parseDay(query.from) : undefined;
-    const toExclusive = query.to
-        ? new Date(parseDay(query.to).getTime() + DAY_MS)
-        : undefined;
-    if (from && toExclusive && from >= toExclusive) {
-        throw new AppError(
-            "The start date must be before the end date",
-            400,
-            "INVALID_DATE_RANGE",
-        );
-    }
+    const pagination = resolvePagination(query, 25);
+    const createdAt = dayRangeFilter(
+        resolveUtcDayRange(
+            query,
+            () => new AppError("Invalid date", 400, "INVALID_DATE_RANGE"),
+        ),
+    );
 
     const where = {
         ...(query.actorId ? { actor_id: query.actorId } : {}),
         ...(query.action ? { action: query.action } : {}),
         ...(query.targetType ? { target_type: query.targetType } : {}),
         ...(query.targetId ? { target_id: query.targetId } : {}),
-        ...(from || toExclusive
-            ? {
-                  created_at: {
-                      ...(from ? { gte: from } : {}),
-                      ...(toExclusive ? { lt: toExclusive } : {}),
-                  },
-              }
-            : {}),
+        ...(createdAt ? { created_at: createdAt } : {}),
     };
 
     const [total, entries] = await prisma.$transaction([
@@ -65,8 +50,8 @@ export async function listAuditLogs(query: AuditLogQuery = {}) {
                 },
             },
             orderBy: [{ created_at: "desc" }, { id: "desc" }],
-            skip: (page - 1) * limit,
-            take: limit,
+            skip: pagination.skip,
+            take: pagination.limit,
         }),
     ]);
 
@@ -89,11 +74,6 @@ export async function listAuditLogs(query: AuditLogQuery = {}) {
                   }
                 : null,
         })),
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.max(1, Math.ceil(total / limit)),
-        },
+        pagination: buildPaginationMeta(pagination, total),
     };
 }
