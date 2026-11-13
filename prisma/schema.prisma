@@ -57,6 +57,8 @@ model User {
   is_email_verified Boolean @default(false)
   email_verified_at DateTime?
   role role @default(user)
+  // Preenchido quando a conta é anonimizada (ex-staff com trilha de moderação).
+  deleted_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

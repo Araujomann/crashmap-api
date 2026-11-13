@@ -138,6 +138,9 @@ export async function updateMe(
  *   histórico de moderação e os avisos administrativos dependem delas.
  * - Tokens, comentários, votos e imagens são removidos em cascata; os relatos
  *   permanecem no mapa sem autor (`created_by_id` → NULL).
+ * - Ex-integrantes da equipe (rebaixados para `user`) que deixaram decisões de
+ *   moderação ou avisos são anonimizados em vez de apagados: os dados pessoais
+ *   somem, mas a autoria das decisões continua rastreável pelo mesmo `id`.
  */
 export async function deleteMe(
     userId: string,
@@ -172,5 +175,56 @@ export async function deleteMe(
         }
     }
 
+    const [decisions, notices] = await Promise.all([
+        prisma.accidentModerationHistory.count({
+            where: { moderated_by_id: userId },
+        }),
+        prisma.administrativeNotice.count({ where: { created_by_id: userId } }),
+    ]);
+
+    if (decisions + notices > 0) {
+        await anonymizeAccount(userId);
+        return;
+    }
+
     await prisma.user.delete({ where: { id: userId } });
+}
+
+export const DELETED_ACCOUNT_NAME = "Conta removida";
+
+/**
+ * Remove os dados pessoais e tudo que a exclusão normal removeria em cascata,
+ * mas mantém a linha de `User` para não quebrar as FKs `Restrict` do histórico
+ * de moderação e dos avisos.
+ */
+async function anonymizeAccount(userId: string): Promise<void> {
+    const where = { user_id: userId };
+    const authored = { created_by_id: userId };
+
+    await prisma.$transaction([
+        prisma.refreshToken.deleteMany({ where }),
+        prisma.pushToken.deleteMany({ where }),
+        prisma.verificationToken.deleteMany({ where }),
+        prisma.passwordResetToken.deleteMany({ where }),
+        prisma.accidentComment.deleteMany({ where: authored }),
+        prisma.accidentImage.deleteMany({ where: authored }),
+        prisma.accidentTrustVote.deleteMany({ where: authored }),
+        prisma.accident.updateMany({
+            where: authored,
+            data: { created_by_id: null },
+        }),
+        prisma.user.update({
+            where: { id: userId },
+            data: {
+                name: DELETED_ACCOUNT_NAME,
+                email: `deleted+${userId}@invalid.local`,
+                password_hash: null,
+                google_id: null,
+                is_email_verified: false,
+                email_verified_at: null,
+                role: "user",
+                deleted_at: new Date(),
+            },
+        }),
+    ]);
 }

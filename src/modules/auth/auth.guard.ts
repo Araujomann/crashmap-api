@@ -35,7 +35,8 @@ export const requireAuthenticatedUser: preHandlerHookHandler = async (
         where: { id: payload.sub },
     });
 
-    if (!user) {
+    // Conta anonimizada: o access token ainda não expirado deixa de valer.
+    if (!user || user.deleted_at) {
         throw new AuthError(
             "Authenticated user not found",
             401,

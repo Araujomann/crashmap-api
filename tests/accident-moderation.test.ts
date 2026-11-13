@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildApp } from "../src/app.js";
 import { prisma } from "../src/shared/database/prisma.js";
+import { purgeModerationHistory } from "./helpers/moderation-history.js";
 
 test("moderation keeps app reports private until approved and audits decisions", async () => {
     const app = await buildApp();
@@ -288,9 +289,7 @@ test("moderation keeps app reports private until approved and audits decisions",
             (id): id is string => Boolean(id),
         );
         if (accidentIds.length > 0) {
-            await prisma.accidentModerationHistory.deleteMany({
-                where: { accident_id: { in: accidentIds } },
-            });
+            await purgeModerationHistory(accidentIds);
             await prisma.accidentComment.deleteMany({
                 where: { accident_id: { in: accidentIds } },
             });

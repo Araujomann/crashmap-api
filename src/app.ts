@@ -10,6 +10,7 @@ import { accidentsRoutes } from "./modules/accidents/accidents.controller.js";
 import { authRoutes } from "./modules/auth/auth.controller.js";
 import { notificationsRoutes } from "./modules/notifications/notifications.controller.js";
 import { usersRoutes } from "./modules/users/users.controller.js";
+import { adminPlugin } from "./modules/admin/admin.plugin.js";
 
 
 const healthDataSchema = {
@@ -42,6 +43,10 @@ export async function buildApp() {
                     description: "Avisos administrativos e notificações push",
                 },
                 { name: "Accidents", description: "Endpoints de Acidentes" },
+                {
+                    name: "Moderation",
+                    description: "Histórico e auditoria da moderação (painel)",
+                },
             ],
             components: {
                 securitySchemes: {
@@ -112,6 +117,7 @@ export async function buildApp() {
 
     app.register(authRoutes, { prefix: "/auth" });
     app.register(usersRoutes, { prefix: "/users" });
+    app.register(adminPlugin, { prefix: "/admin" });
     app.register(notificationsRoutes, { prefix: "/notifications" });
     app.register(accidentsRoutes, { prefix: "/accidents" });
 
