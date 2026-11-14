@@ -43,6 +43,19 @@ enum accident_moderation_status {
   REJECTED
 }
 
+enum prf_import_run_status {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum prf_import_file_status {
+  IMPORTED
+  UNCHANGED
+  NOT_PUBLISHED
+  FAILED
+}
+
 enum push_platform {
   android
   ios
@@ -323,6 +336,58 @@ model AccidentImage {
   @@index([accident_id])
   @@index([created_by_id])
   @@index([created_at])
+}
+
+// Histórico da sincronização com os dados abertos da PRF.
+// O índice parcial "no máximo uma execução RUNNING" (trava contra execuções
+// simultâneas) fica no SQL da migration (o Prisma não o representa).
+model PrfImportRun {
+  id          String                @id @default(uuid())
+  // "schedule", "manual" ou "file" (importação de arquivo local).
+  trigger     String
+  dry_run     Boolean               @default(false)
+  forced      Boolean               @default(false)
+  status      prf_import_run_status @default(RUNNING)
+  error       String?
+  started_at  DateTime              @default(now())
+  finished_at DateTime?
+
+  files PrfImportFile[]
+
+  @@index([started_at])
+  @@map("prf_import_runs")
+}
+
+// Um arquivo anual da PRF processado dentro de uma execução.
+model PrfImportFile {
+  id                      String                 @id @default(uuid())
+  run_id                  String
+  source_year             Int
+  source_url              String?
+  file_name               String?
+  file_size               Int?
+  file_sha256             String?
+  remote_last_modified    DateTime?
+  status                  prf_import_file_status
+  rows_read               Int                    @default(0)
+  rows_matched            Int                    @default(0)
+  inserted                Int                    @default(0)
+  updated                 Int                    @default(0)
+  unchanged               Int                    @default(0)
+  rejected                Int                    @default(0)
+  missing_from_source     Int                    @default(0)
+  staff_edits_overwritten Int                    @default(0)
+  // Motivos de rejeição, amostras de chaves e avisos. Nunca dados pessoais.
+  details                 Json                   @default("{}")
+  error                   String?
+  started_at              DateTime               @default(now())
+  finished_at             DateTime?
+
+  run PrfImportRun @relation(fields: [run_id], references: [id], onDelete: Cascade)
+
+  @@index([run_id])
+  @@index([source_year, status])
+  @@map("prf_import_files")
 }
 
 model RefreshToken {

@@ -1,132 +1,74 @@
+/**
+ * Sincronização com os dados abertos da PRF (Imperatriz–MA).
+ *
+ *   pnpm sync:prf                      anos padrão (corrente + já importados)
+ *   pnpm sync:prf --year=2025,2026     anos específicos (aceita 2022-2026)
+ *   pnpm sync:prf --force              reprocessa mesmo sem mudança no arquivo
+ *   pnpm sync:prf --dry-run            valida e compara, sem gravar ocorrências
+ *   pnpm sync:prf --year=2026 --source-url=<link>   link fixo para um ano
+ *
+ * Variáveis opcionais: PRF_SYNC_YEARS, PRF_SOURCE_URL + PRF_SOURCE_YEAR,
+ * PRF_CATALOG_URL e PRF_SYNC_TRIGGER ("schedule" no GitHub Actions).
+ */
 import "dotenv/config.js";
-import fs from "node:fs";
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, basename, resolve } from "node:path";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
-import { spawn } from "node:child_process";
-import unzipper from "unzipper";
+import { prisma } from "../database/prisma.js";
+import { parsePrfCliArguments, parseYearList } from "../../modules/prf-sync/prf-sync.cli.js";
+import {
+    PrfSyncLockedError,
+    runPrfSync,
+    type PrfSyncTrigger,
+} from "../../modules/prf-sync/prf-sync.service.js";
 
-const configuredSourceUrl = process.env.PRF_SOURCE_URL;
-const sourceYear =
-    process.env.PRF_SOURCE_YEAR ?? new Date().getUTCFullYear().toString();
+async function main(): Promise<number> {
+    const args = parsePrfCliArguments(process.argv.slice(2));
+    const years = args.years ?? parseYearList(process.env.PRF_SYNC_YEARS);
 
-if (!configuredSourceUrl) {
-    throw new Error("Missing required environment variable: PRF_SOURCE_URL");
-}
-
-function normalizeSourceUrl(value: string): string {
-    const url = new URL(value);
-    const match = url.pathname.match(/^\/file\/d\/([^/]+)/);
-
-    if (url.hostname === "drive.google.com" && match) {
-        return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(match[1])}`;
-    }
-
-    return value;
-}
-
-const sourceUrl = normalizeSourceUrl(configuredSourceUrl);
-
-function runImporter(csvPath: string): Promise<void> {
-    return new Promise((resolvePromise, rejectPromise) => {
-        const child = spawn(
-            process.execPath,
-            [
-                resolve(process.cwd(), "node_modules/tsx/dist/cli.mjs"),
-                resolve(process.cwd(), "src/shared/scripts/import-prf.ts"),
-                csvPath,
-                `--year=${sourceYear}`,
-            ],
-            {
-                stdio: "inherit",
-                shell: false,
-            },
-        );
-
-        child.on("error", rejectPromise);
-        child.on("exit", (code) => {
-            if (code === 0) {
-                resolvePromise();
-                return;
-            }
-            rejectPromise(
-                new Error(
-                    `Importador PRF terminou com codigo ${code ?? "desconhecido"}.`,
-                ),
+    const overrideUrl = args.sourceUrl ?? process.env.PRF_SOURCE_URL?.trim();
+    let sourceUrlOverride: { year: number; url: string } | undefined;
+    if (overrideUrl) {
+        const overrideYear =
+            (args.sourceUrl && years?.length === 1 ? years[0] : undefined) ??
+            parseYearList(process.env.PRF_SOURCE_YEAR)?.[0];
+        if (!overrideYear) {
+            throw new Error(
+                "Link fixo informado sem ano: use --year=AAAA ou PRF_SOURCE_YEAR.",
             );
-        });
-    });
-}
-
-async function downloadSource(directory: string): Promise<string> {
-    const response = await fetch(sourceUrl, {
-        signal: AbortSignal.timeout(120_000),
-    });
-    if (!response.ok || !response.body) {
-        throw new Error(`Download PRF falhou: HTTP ${response.status}`);
+        }
+        sourceUrlOverride = { year: overrideYear, url: overrideUrl };
     }
 
-    const contentType =
-        response.headers.get("content-type")?.toLowerCase() ?? "";
-    const contentDisposition =
-        response.headers.get("content-disposition")?.toLowerCase() ?? "";
-    if (contentType.includes("text/html")) {
-        throw new Error(
-            "PRF_SOURCE_URL aponta para uma pagina HTML; use o link direto de Baixar planilha.",
-        );
-    }
+    const trigger: PrfSyncTrigger =
+        process.env.PRF_SYNC_TRIGGER === "schedule" ? "schedule" : "manual";
 
-    const isZip =
-        new URL(sourceUrl).pathname.toLowerCase().endsWith(".zip") ||
-        contentType.includes("zip") ||
-        contentDisposition.includes(".zip");
-    const extension = isZip ? ".zip" : ".csv";
-    const downloadedPath = join(directory, `prf-source${extension}`);
-    await pipeline(
-        Readable.fromWeb(response.body as never),
-        fs.createWriteStream(downloadedPath),
+    const report = await runPrfSync(
+        {
+            trigger,
+            years,
+            force: args.force,
+            dryRun: args.dryRun,
+            sourceUrlOverride,
+            catalogUrl: process.env.PRF_CATALOG_URL?.trim() || undefined,
+        },
+        { db: prisma },
     );
-    return downloadedPath;
+
+    console.log(JSON.stringify({ source: "PRF", municipality: "IMPERATRIZ-MA", ...report }, null, 2));
+    return report.status === "SUCCEEDED" ? 0 : 1;
 }
 
-async function extractCsv(
-    archivePath: string,
-    directory: string,
-): Promise<string> {
-    if (!archivePath.toLowerCase().endsWith(".zip")) return archivePath;
-
-    const zip = await unzipper.Open.file(archivePath);
-    const csvEntries = zip.files.filter((entry) =>
-        entry.path.toLowerCase().endsWith(".csv"),
-    );
-    const entry =
-        csvEntries.find((item) => item.path.toLowerCase().includes("ocorr")) ??
-        csvEntries[0];
-    if (!entry) throw new Error("O arquivo ZIP da PRF nao contem nenhum CSV.");
-
-    const csvPath = join(directory, basename(entry.path));
-    await pipeline(entry.stream(), fs.createWriteStream(csvPath));
-    return csvPath;
-}
-
-async function main(): Promise<void> {
-    const directory = await mkdtemp(join(tmpdir(), "crashmap-prf-"));
-    try {
-        const downloadedPath = await downloadSource(directory);
-        const downloadedStats = await stat(downloadedPath);
-        if (downloadedStats.size === 0)
-            throw new Error("O arquivo baixado da PRF esta vazio.");
-
-        const csvPath = await extractCsv(downloadedPath, directory);
-        await runImporter(csvPath);
-    } finally {
-        await rm(directory, { recursive: true, force: true });
-    }
-}
-
-main().catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-});
+main()
+    .then((code) => {
+        process.exitCode = code;
+    })
+    .catch((error: unknown) => {
+        if (error instanceof PrfSyncLockedError) {
+            console.error(error.message);
+            process.exitCode = 75;
+            return;
+        }
+        console.error(error instanceof Error ? error.message : error);
+        process.exitCode = 1;
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

@@ -1,9 +1,24 @@
 name: Sync PRF accidents
 
+# A PRF declara atualização mensal, mas não publica em dia fixo. A verificação
+# é diária e barata: sem arquivo novo, nada é baixado nem gravado.
 on:
     schedule:
-        - cron: "17 3 1 * *"
+        - cron: "17 9 * * *" # 06:17 em Brasília (o GitHub pode atrasar)
     workflow_dispatch:
+        inputs:
+            years:
+                description: "Anos (ex.: 2026, 2025,2026 ou 2022-2026). Vazio = padrão."
+                required: false
+                default: ""
+            force:
+                description: "Reprocessar mesmo sem mudança no arquivo"
+                type: boolean
+                default: false
+            dry_run:
+                description: "Somente validar e comparar (não grava ocorrências)"
+                type: boolean
+                default: false
 
 concurrency:
     group: prf-sync
@@ -22,30 +37,53 @@ jobs:
             REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
             PRF_SOURCE_URL: ${{ secrets.PRF_SOURCE_URL }}
             PRF_SOURCE_YEAR: ${{ vars.PRF_SOURCE_YEAR }}
+            PRF_SYNC_YEARS: ${{ inputs.years || vars.PRF_SYNC_YEARS }}
+            PRF_SYNC_TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}
 
         steps:
+            - name: Check configuration
+              id: config
+              run: |
+                  if [ -z "$DATABASE_URL" ] || [ -z "$ACCESS_TOKEN_SECRET" ] || [ -z "$REFRESH_TOKEN_SECRET" ]; then
+                      echo "::warning::Secrets DATABASE_URL, ACCESS_TOKEN_SECRET e REFRESH_TOKEN_SECRET nao configurados; sincronizacao PRF ignorada."
+                      echo "ready=false" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "ready=true" >> "$GITHUB_OUTPUT"
+                  fi
+
             - name: Checkout
+              if: steps.config.outputs.ready == 'true'
               uses: actions/checkout@v4
 
             - name: Setup pnpm
+              if: steps.config.outputs.ready == 'true'
               uses: pnpm/action-setup@v4
               with:
                   version: 10.7.0
 
             - name: Setup Node.js
+              if: steps.config.outputs.ready == 'true'
               uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: pnpm
 
             - name: Install dependencies
+              if: steps.config.outputs.ready == 'true'
               run: pnpm install --frozen-lockfile
 
             - name: Generate Prisma client
+              if: steps.config.outputs.ready == 'true'
               run: pnpm prisma:generate
 
-            - name: Build
+            - name: Type check
+              if: steps.config.outputs.ready == 'true'
               run: pnpm build
 
             - name: Synchronize PRF
-              run: pnpm sync:prf
+              if: steps.config.outputs.ready == 'true'
+              run: |
+                  args=""
+                  if [ "${{ inputs.force }}" = "true" ]; then args="$args --force"; fi
+                  if [ "${{ inputs.dry_run }}" = "true" ]; then args="$args --dry-run"; fi
+                  pnpm sync:prf $args

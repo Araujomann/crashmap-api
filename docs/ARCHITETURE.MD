@@ -23,6 +23,7 @@ src/
 │   ├── health/          GET /health
 │   ├── moderation/      histórico de decisões de moderação
 │   ├── notifications/   avisos administrativos e push
+│   ├── prf-sync/        sincronização com os dados abertos da PRF (docs/PRF_SYNC.md)
 │   ├── settings/        configurações da plataforma
 │   ├── team/            convites e equipe de moderação
 │   └── users/           conta do usuário e gestão de contas (admin)
