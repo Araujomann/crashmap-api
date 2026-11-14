@@ -457,19 +457,21 @@ export async function deleteAccident(
         throw accidentNotFoundError();
     }
 
-    if (currentAccident.moderation_status !== "PENDING") {
-        throw new AppError(
-            "Moderated accidents cannot be deleted",
-            409,
-            "ACCIDENT_MODERATED_CANNOT_DELETE",
-        );
-    }
-
+    // Permissão antes do status: quem não pode apagar o relato recebe 403,
+    // sem descobrir se ele já foi moderado.
     if (!canManageContent(user, currentAccident.created_by_id)) {
         throw new AppError(
             "You cannot delete this accident",
             403,
             "ACCIDENT_FORBIDDEN",
+        );
+    }
+
+    if (currentAccident.moderation_status !== "PENDING") {
+        throw new AppError(
+            "Moderated accidents cannot be deleted",
+            409,
+            "ACCIDENT_MODERATED_CANNOT_DELETE",
         );
     }
 

@@ -134,6 +134,12 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
             .accessToken as string;
         intruderUserId = intruderRegisterResponse.json().data.user.id as string;
 
+        // Criar e alterar relatos exige e-mail verificado.
+        await prisma.user.updateMany({
+            where: { id: { in: [ownerUserId, intruderUserId] } },
+            data: { is_email_verified: true },
+        });
+
         const createResponse = await app.inject({
             method: "POST",
             url: "/accidents",
@@ -179,6 +185,41 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
 
         assert.equal(deleteResponse.statusCode, 403);
         assert.equal(deleteResponse.json().error.code, "ACCIDENT_FORBIDDEN");
+
+        // Relato já moderado: quem não é o dono continua recebendo 403 (não
+        // descobre o status); o dono recebe 409.
+        await prisma.accident.update({
+            where: { id: accidentId },
+            data: { moderation_status: "APPROVED" },
+        });
+
+        const intruderModeratedDelete = await app.inject({
+            method: "DELETE",
+            url: `/accidents/${accidentId}`,
+            headers: {
+                authorization: `Bearer ${intruderAccessToken}`,
+            },
+        });
+
+        assert.equal(intruderModeratedDelete.statusCode, 403);
+        assert.equal(
+            intruderModeratedDelete.json().error.code,
+            "ACCIDENT_FORBIDDEN",
+        );
+
+        const ownerModeratedDelete = await app.inject({
+            method: "DELETE",
+            url: `/accidents/${accidentId}`,
+            headers: {
+                authorization: `Bearer ${ownerAccessToken}`,
+            },
+        });
+
+        assert.equal(ownerModeratedDelete.statusCode, 409);
+        assert.equal(
+            ownerModeratedDelete.json().error.code,
+            "ACCIDENT_MODERATED_CANNOT_DELETE",
+        );
     } finally {
         if (accidentId) {
             await prisma.accidentImage.deleteMany({
