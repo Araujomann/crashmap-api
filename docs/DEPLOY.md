@@ -86,18 +86,45 @@ clientes.
 A API usa o IP do cliente nos limites de tentativas (login, cadastro, senha) e
 na auditoria. No Render, a requisição chega por um balanceador que **acrescenta**
 o IP ao cabeçalho `X-Forwarded-For` sem limpar o que o cliente enviou, então
-`TRUST_PROXY=true` permitiria falsificar o IP. O número correto de proxies não
-está na documentação do Render e precisa ser medido:
+`TRUST_PROXY=true` permitiria falsificar o IP. A documentação do Render não
+informa a cadeia de proxies; ela foi medida em 14/11/2026.
 
-1. Com `TRUST_PROXY` vazio, faça uma requisição e veja no log do Render
-   (`remoteAddress`) qual IP aparece. Será o do balanceador, igual para todos
-   os clientes.
-2. Teste `TRUST_PROXY=1` e compare o `remoteAddress` com o seu IP público. Se
-   aparecer um IP de borda (Cloudflare) em vez do seu, teste `2`.
-3. Fique com o menor número que mostra o seu IP real.
+### Como foi medido
 
-Enquanto isso não for ajustado, todos os clientes compartilham o mesmo limite
-de tentativas.
+Requisições a `/health?probe-<marca>` com um IP falso no cabeçalho
+(`X-Forwarded-For: 203.0.113.77`), conferindo no log do Render o
+`remoteAddress` registrado para cada valor de `TRUST_PROXY`:
+
+| `TRUST_PROXY` | `remoteAddress` | Conclusão |
+|---|---|---|
+| `1` | `10.31.95.109` | há um proxy interno na rede privada `10.x` |
+| `10.0.0.0/8` | `127.0.0.1` | antes dele, um proxy local no próprio contêiner |
+| `127.0.0.0/8,10.0.0.0/8,::1` | `104.23.209.211` | a Cloudflare (`104.16.0.0/13`) fica na frente do Render |
+| interno + faixas da Cloudflare | IP público real do cliente | correto |
+
+O IP falso nunca foi aceito. Cadeia observada:
+
+```text
+cliente → Cloudflare → balanceador Render → proxy 10.x → proxy 127.0.0.1 → API
+```
+
+### Valor em uso
+
+Endereços internos mais as faixas publicadas pela Cloudflare em
+<https://www.cloudflare.com/ips/> (consultadas em 14/11/2026), em uma linha:
+
+```text
+127.0.0.0/8,10.0.0.0/8,::1,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
+```
+
+A API lê o cabeçalho da direita para a esquerda, pula os proxies dessa lista e
+usa o primeiro IP de fora dela. O que o cliente escreve no cabeçalho fica à
+esquerda do IP real e nunca é usado. Uma lista foi preferida a um número fixo
+(aqui seria `3`) porque continua correta se a quantidade de saltos internos
+mudar.
+
+**Manutenção:** se o log voltar a mostrar um IP da Cloudflare em
+`remoteAddress`, atualize as faixas a partir da página da Cloudflare.
 
 ## Atualizações
 

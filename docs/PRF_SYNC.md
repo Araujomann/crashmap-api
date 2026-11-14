@@ -236,8 +236,8 @@ clientes exibem:
 
 ## 7. Agendamento
 
-**[Implementado, não verificado em produção]** O workflow
-`.github/workflows/prf-sync.yml`:
+**[Execução manual verificada em produção; execução agendada ainda não
+observada]** O workflow `.github/workflows/prf-sync.yml`:
 
 - roda **diariamente** às 09:17 UTC (06:17 em Brasília). Como a PRF não publica
   em dia fixo, a verificação diária detecta a publicação em até um dia. Sem
@@ -370,10 +370,35 @@ Depois disso, a base local tinha 92 registros PRF de 2026, nenhuma chave
 duplicada e nenhum caractere corrompido. As 10 novas eram as ocorrências de
 setembro de 2026 que ainda não estavam importadas.
 
+### Execução em produção (GitHub Actions + Neon, 14/11/2026)
+
+Ambiente descrito em `docs/DEPLOY.md`: API no Render, banco PostgreSQL no
+Neon, secret `DATABASE_URL` no GitHub, workflow disparado manualmente com
+`years = 2026`.
+
+| Execução | Resultado `datatran2026.zip` |
+|---|---|
+| #3, `dry_run` | `IMPORTED` (simulação): 54.895 linhas lidas, 92 de Imperatriz–MA, 92 a inserir, 0 rejeitadas; SHA-256 `d77d3db2…defccb`, idêntico ao do teste local; nada gravado |
+| #4, carga real | concluída com sucesso |
+
+Conferência pela API pública depois da execução #4:
+
+- `GET /accidents/map?source=PRF`: 92 ocorrências, de janeiro a setembro de
+  2026 (8 a 12 por mês), com acentuação correta.
+- `GET /accidents/map/version`: `92:…`, ou seja, a versão do mapa avançou e os
+  clientes recarregam os dados.
+- `GET /accidents/overview`: 92 aprovadas, 73 com vítimas.
+
+As execuções #1 e #2 (01/10 e 01/11/2026) eram as do workflow anterior, que
+falhavam por falta de banco e de secrets.
+
 ### Não verificado
 
-- Execução agendada ou manual no GitHub Actions: não há banco de produção nem
-  secrets configurados. O YAML foi revisado, mas não executado.
+- Execução **agendada** (cron diário): a primeira está prevista para
+  15/11/2026, 06:17 (Brasília). O esperado é `UNCHANGED`, sem gravação.
+- Detecção de uma publicação nova da PRF em produção: depende da próxima
+  publicação. O comportamento está coberto pelos testes automatizados e pela
+  execução local com o arquivo real.
 - Arquivos de outros anos (2022–2025) não foram importados; só os metadados
   (HEAD) de 2024 e 2025 foram consultados.
 
