@@ -245,9 +245,9 @@ clientes exibem:
 - aceita execução manual (`workflow_dispatch`) com as entradas `years`, `force`
   e `dry_run`;
 - usa `concurrency: prf-sync`, além da trava no banco;
-- se `DATABASE_URL`, `ACCESS_TOKEN_SECRET` ou `REFRESH_TOKEN_SECRET` não
-  existirem, emite um aviso e termina **sem falhar**. Isso evita a falha mensal
-  observada antes de haver ambiente de produção;
+- se o secret `DATABASE_URL` não existir, emite um aviso e termina **sem
+  falhar**. Isso evita a falha mensal observada antes de haver ambiente de
+  produção;
 - não aplica migrations; isso cabe ao processo de deploy.
 
 Motivo da escolha: a API ainda não está implantada e o projeto já usava o
@@ -261,15 +261,15 @@ hospedagens que hibernam, e não exige serviço novo.
 | Variável | Obrigatória | Uso |
 |---|---|---|
 | `DATABASE_URL` | sim | banco alvo |
-| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET` | sim | exigidas pela validação de ambiente da API (`env.ts`) |
+| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET` | sim (localmente) | exigidas pela validação de ambiente da API (`env.ts`); a sincronização não as usa, e o workflow define valores fixos |
 | `PRF_SYNC_YEARS` | não | anos a sincronizar: `2026`, `2025,2026` ou `2022-2026` |
 | `PRF_SOURCE_URL` + `PRF_SOURCE_YEAR` | não | link fixo para um ano, no lugar do catálogo |
 | `PRF_CATALOG_URL` | não | URL alternativa do catálogo (testes ou espelho) |
 | `PRF_SYNC_TRIGGER` | não | `schedule` no Actions; padrão `manual` |
 
-No GitHub: os secrets `DATABASE_URL`, `ACCESS_TOKEN_SECRET` e
-`REFRESH_TOKEN_SECRET` (e opcionalmente `PRF_SOURCE_URL`), mais as variables
-opcionais `PRF_SYNC_YEARS` e `PRF_SOURCE_YEAR`.
+No GitHub: o secret `DATABASE_URL` (e opcionalmente `PRF_SOURCE_URL`), mais
+as variables opcionais `PRF_SYNC_YEARS` e `PRF_SOURCE_YEAR`. Os segredos de
+token da API não precisam ser copiados para o GitHub.
 
 ---
 

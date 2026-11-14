@@ -33,8 +33,11 @@ jobs:
         timeout-minutes: 30
         env:
             DATABASE_URL: ${{ secrets.DATABASE_URL }}
-            ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
-            REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
+            # A validação de ambiente da API (src/shared/config/env.ts) exige
+            # estas variáveis, mas a sincronização não emite tokens. Valores
+            # fixos evitam copiar os segredos reais da API para o GitHub.
+            ACCESS_TOKEN_SECRET: not-used-by-prf-sync
+            REFRESH_TOKEN_SECRET: not-used-by-prf-sync
             PRF_SOURCE_URL: ${{ secrets.PRF_SOURCE_URL }}
             PRF_SOURCE_YEAR: ${{ vars.PRF_SOURCE_YEAR }}
             PRF_SYNC_YEARS: ${{ inputs.years || vars.PRF_SYNC_YEARS }}
@@ -44,8 +47,8 @@ jobs:
             - name: Check configuration
               id: config
               run: |
-                  if [ -z "$DATABASE_URL" ] || [ -z "$ACCESS_TOKEN_SECRET" ] || [ -z "$REFRESH_TOKEN_SECRET" ]; then
-                      echo "::warning::Secrets DATABASE_URL, ACCESS_TOKEN_SECRET e REFRESH_TOKEN_SECRET nao configurados; sincronizacao PRF ignorada."
+                  if [ -z "$DATABASE_URL" ]; then
+                      echo "::warning::Secret DATABASE_URL nao configurado; sincronizacao PRF ignorada."
                       echo "ready=false" >> "$GITHUB_OUTPUT"
                   else
                       echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -65,7 +68,7 @@ jobs:
               if: steps.config.outputs.ready == 'true'
               uses: actions/setup-node@v4
               with:
-                  node-version: 22
+                  node-version-file: .node-version
                   cache: pnpm
 
             - name: Install dependencies

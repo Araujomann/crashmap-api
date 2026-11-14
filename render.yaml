@@ -1,0 +1,50 @@
+# Blueprint do Render para a CrashMap API (plano gratuito).
+# Banco: PostgreSQL no Neon (DATABASE_URL informada na criação do Blueprint).
+# Passo a passo completo em docs/DEPLOY.md.
+services:
+    - type: web
+      name: crashmap-api
+      runtime: node
+      plan: free
+      region: virginia
+      branch: development
+      # O plano gratuito não tem "pre-deploy command"; por isso as migrations
+      # rodam no fim do build, depois de compilar. `--prod=false` garante as
+      # devDependencies (TypeScript) mesmo com NODE_ENV=production.
+      buildCommand: >-
+          pnpm install --frozen-lockfile --prod=false &&
+          pnpm prisma:generate &&
+          pnpm build &&
+          pnpm prisma migrate deploy
+      startCommand: node dist/src/server.js
+      healthCheckPath: /health
+      envVars:
+          - key: NODE_ENV
+            value: production
+          - key: DATABASE_URL
+            sync: false
+          - key: ACCESS_TOKEN_SECRET
+            generateValue: true
+          - key: REFRESH_TOKEN_SECRET
+            generateValue: true
+          # Ajustado depois do primeiro deploy (ver docs/DEPLOY.md, passo 6).
+          - key: TRUST_PROXY
+            sync: false
+          # Base dos links de convite de moderador (pode ficar vazio até o
+          # Farol Admin ter endereço público).
+          - key: ADMIN_PANEL_URL
+            sync: false
+          - key: SMTP_USER
+            sync: false
+          - key: SMTP_PASS
+            sync: false
+          - key: SMTP_FROM
+            sync: false
+          # O upload só é habilitado com as três variáveis separadas
+          # (CLOUDINARY_URL sozinha não basta; ver cloudinary.ts).
+          - key: CLOUDINARY_CLOUD_NAME
+            sync: false
+          - key: CLOUDINARY_API_KEY
+            sync: false
+          - key: CLOUDINARY_API_SECRET
+            sync: false
