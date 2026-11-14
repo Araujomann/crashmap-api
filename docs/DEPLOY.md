@@ -74,7 +74,15 @@ sem ela, continua usando o SMTP (útil localmente).
    `SMTP_FROM` (formato `email@x.com` ou `Nome <email@x.com>`).
 
 Remetentes de e-mail gratuito (Gmail) sem domínio próprio funcionam, mas os
-filtros de spam desconfiam mais; verifique também a caixa de spam.
+filtros de spam desconfiam mais; verifique também a caixa de spam. O Brevo
+exibe um aviso de que remetentes "freemail" não seguem as regras de Google,
+Yahoo e Microsoft (DKIM/DMARC); mesmo assim, o envio funcionou.
+
+Verificação (14/11/2026): com `BREVO_API_KEY` no Render,
+`POST /auth/resend-verification` entregou o código na caixa de entrada e a
+conta foi verificada por `POST /auth/verify-email`. Atenção: o endpoint de
+reenvio responde 200 mesmo quando a entrega falha (a falha vai só para o log),
+então a confirmação é a chegada do e-mail ou o log do Brevo/Render.
 
 ## Passo 3 — Verificação da API
 
@@ -97,9 +105,57 @@ Esperado: `{"data":{"status":"ok",...,"database":"up"}}`.
 
 ## Passo 5 — Clientes
 
-Atualize a URL base da API no Farol e no Farol Admin para
-`https://<serviço>.onrender.com`. Essa mudança fica nos repositórios dos
-clientes.
+### Farol Admin (Vercel, plano Hobby)
+
+O painel (Next.js, repositório `farol-admin`) foi publicado na Vercel, que
+detecta o Next.js e sobrescreve `X-Forwarded-For` com o IP real do navegador,
+como o painel espera. Configuração:
+
+1. Importar o repositório na Vercel; única variável:
+   `CRASHMAP_API_URL=https://<serviço>.onrender.com` (sem barra final).
+2. Região das funções: Washington, D.C. (`iad1`), perto da API.
+3. No Render, `ADMIN_PANEL_URL` = endereço `https://….vercel.app` do painel,
+   para que os convites de moderador levem o link direto.
+
+Verificação (14/11/2026): `/login` responde 200; uma página do painel aberta
+com um refresh token inválido redireciona para `/login` e limpa os cookies
+(`Secure`, `HttpOnly`, `SameSite=lax`), o que prova que o painel alcançou a
+API e ela recusou o token.
+
+**Limitação conhecida:** a API só confia no `X-Forwarded-For` vindo da
+Cloudflare e da rede interna do Render (passo 6). O servidor do painel na
+Vercel usa IPs dinâmicos e não está nessa lista, então, nas ações feitas pelo
+painel, a API registra o IP da Vercel, não o do moderador (auditoria e limite
+de tentativas do login do painel). A correção planejada é o painel enviar o IP
+num cabeçalho assinado com um segredo compartilhado.
+
+### Farol (Android)
+
+O app precisa apontar para `https://<serviço>.onrender.com` e ser gerado como
+APK (distribuição direta) ou publicado na Google Play.
+
+## Primeiro administrador
+
+O papel `admin` só é concedido pelo script `admin:grant-role`, que exige
+e-mail verificado e registra a alteração na auditoria.
+
+1. Criar a conta (app ou `POST /auth/register` em `/docs`) e verificar o
+   e-mail (`POST /auth/verify-email`, autenticado com o `accessToken`).
+2. No terminal local, apontando temporariamente para o banco de produção:
+
+```powershell
+$env:DATABASE_URL = "<string do Neon>"
+pnpm admin:grant-role <email> admin
+Remove-Item Env:DATABASE_URL
+```
+
+O último comando é obrigatório: sem ele, comandos seguintes na mesma janela
+(como `pnpm test`, que apaga dados de teste) rodariam contra a produção.
+
+Se a string do banco for exposta (em chat, print ou log), gere uma nova senha
+para o papel no Neon e atualize `DATABASE_URL` no Render (com redeploy) e no
+secret do GitHub. Conexões já abertas continuam funcionando após a troca; para
+confirmar, reinicie o serviço e verifique `/health` com `uptime` baixo.
 
 ## Passo 6 — IP real do cliente (`TRUST_PROXY`)
 
