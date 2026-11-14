@@ -56,6 +56,26 @@ preços de cada provedor antes de criar as contas.
 3. Confirme. O primeiro build instala dependências, gera o cliente Prisma,
    compila e aplica todas as migrations no Neon.
 
+## Passo 2b — E-mail pela API do Brevo
+
+Desde setembro de 2025, o plano gratuito do Render bloqueia conexões de saída
+nas portas SMTP (25, 465 e 587), então o envio pelo Gmail (porta 465) não
+funciona. Isso afeta a verificação de conta, a recuperação de senha e os
+convites de moderador. Quando `BREVO_API_KEY` está definida, a API envia pela
+API HTTP do Brevo (`POST https://api.brevo.com/v3/smtp/email`, porta 443);
+sem ela, continua usando o SMTP (útil localmente).
+
+1. Crie a conta no [Brevo](https://www.brevo.com). O plano gratuito é
+   relatado com limite de 300 e-mails/dia; confira na página de preços.
+2. Em **Senders**, cadastre e verifique o endereço remetente (o mesmo de
+   `SMTP_FROM`; pode ser um Gmail).
+3. Em **SMTP & API → API keys**, gere uma chave.
+4. No Render, em **Environment**, crie `BREVO_API_KEY` com a chave e confira
+   `SMTP_FROM` (formato `email@x.com` ou `Nome <email@x.com>`).
+
+Remetentes de e-mail gratuito (Gmail) sem domínio próprio funcionam, mas os
+filtros de spam desconfiam mais; verifique também a caixa de spam.
+
 ## Passo 3 — Verificação da API
 
 ```bash

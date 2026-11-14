@@ -140,6 +140,7 @@ const smtpMailer: ModeratorInviteMailer = async (message, logger) => {
         // (spam, filtro), não na API.
         logger[rejected ? "warn" : "info"](
             {
+                provider: info.provider,
                 messageId: info.messageId,
                 accepted: info.accepted.length,
                 rejected: info.rejected.length,

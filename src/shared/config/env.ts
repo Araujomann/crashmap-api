@@ -120,6 +120,9 @@ export const env = {
     SMTP_PASS: process.env.SMTP_PASS?.replace(/\s/g, "") ?? "",
     SMTP_FROM:
         process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || "",
+    // Envio por API HTTP (Brevo). Quando definido, substitui o SMTP; útil onde
+    // as portas SMTP de saída são bloqueadas (ex.: plano gratuito do Render).
+    BREVO_API_KEY: process.env.BREVO_API_KEY?.trim() ?? "",
     CLOUDINARY_CLOUD_NAME: cloudinaryConfig.CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY: cloudinaryConfig.CLOUDINARY_API_KEY,
     CLOUDINARY_API_SECRET: cloudinaryConfig.CLOUDINARY_API_SECRET,

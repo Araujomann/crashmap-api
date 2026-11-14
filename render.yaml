@@ -34,6 +34,11 @@ services:
           # Farol Admin ter endereço público).
           - key: ADMIN_PANEL_URL
             sync: false
+          # O plano gratuito do Render bloqueia as portas SMTP de saída;
+          # com BREVO_API_KEY os e-mails saem pela API HTTP do Brevo e
+          # SMTP_FROM é o remetente (verificado no Brevo).
+          - key: BREVO_API_KEY
+            sync: false
           - key: SMTP_USER
             sync: false
           - key: SMTP_PASS
