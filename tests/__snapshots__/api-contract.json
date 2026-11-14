@@ -5605,6 +5605,134 @@
           "tags": [
             "Accidents"
           ],
+          "parameters": [
+            {
+              "schema": {
+                "type": "integer"
+              },
+              "in": "query",
+              "name": "page",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "integer"
+              },
+              "in": "query",
+              "name": "limit",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "string"
+              },
+              "in": "query",
+              "name": "search",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "in": "query",
+              "name": "severity",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "APPROVED",
+                  "REJECTED"
+                ]
+              },
+              "in": "query",
+              "name": "status",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "newest",
+                  "oldest"
+                ]
+              },
+              "in": "query",
+              "name": "sort",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "in": "query",
+              "name": "from",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "in": "query",
+              "name": "to",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "in": "query",
+              "name": "minLat",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "in": "query",
+              "name": "maxLat",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "in": "query",
+              "name": "minLng",
+              "required": false
+            },
+            {
+              "schema": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              },
+              "in": "query",
+              "name": "maxLng",
+              "required": false
+            }
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
           "responses": {
             "200": {
               "description": "Default Response",
@@ -7189,6 +7317,10 @@
       },
       "/accidents/{id}/images": {
         "get": {
+          "summary": "Listar imagens de um acidente",
+          "tags": [
+            "Accidents"
+          ],
           "parameters": [
             {
               "schema": {
@@ -7334,6 +7466,42 @@
                           "updated_at": {
                             "type": "string",
                             "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Default Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "error"
+                    ],
+                    "properties": {
+                      "error": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "code",
+                          "message",
+                          "statusCode"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "statusCode": {
+                            "type": "integer"
                           }
                         }
                       }

@@ -18,6 +18,7 @@ import {
     accidentIdParamsSchema,
     accidentOverviewResponseSchema,
     accidentResponseSchema,
+    accidentsListQuerySchema,
     accidentsListResponseSchema,
     accidentsMapQuerySchema,
     accidentsMapResponseSchema,
@@ -89,6 +90,8 @@ function registerReadRoutes(app: FastifyInstance) {
             schema: {
                 tags: ['Accidents'],
                 summary: 'Listar acidentes com paginação e filtros',
+                security: [{ bearerAuth: [] }],
+                querystring: accidentsListQuerySchema,
                 response: {
                     200: accidentsListResponseSchema,
                 },

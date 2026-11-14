@@ -3,6 +3,7 @@ import {
     requireAuthenticatedUser,
     requireVerifiedEmail,
 } from "../auth/auth.guard.js";
+import { apiErrorSchema } from "../../shared/http/api-response.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { auditContextFrom } from "../audit/audit.service.js";
 import {
@@ -50,6 +51,8 @@ export function registerImageRoutes(app: FastifyInstance) {
         "/:id/images",
         {
             schema: {
+                tags: ['Accidents'],
+                summary: 'Listar imagens de um acidente',
                 params: accidentIdParamsSchema,
                 response: {
                     200: accidentImagesListResponseSchema,
@@ -74,6 +77,7 @@ export function registerImageRoutes(app: FastifyInstance) {
                 params: accidentIdParamsSchema,
                 response: {
                     201: accidentImageResponseSchema,
+                    400: apiErrorSchema,
                 },
             },
         },
@@ -83,7 +87,7 @@ export function registerImageRoutes(app: FastifyInstance) {
             const upload = await readAccidentImageUpload(request);
 
             if (!upload.fileBuffer) {
-                return reply.code(400 as 201).send({
+                return reply.code(400).send({
                     error: {
                         code: "IMAGE_FILE_REQUIRED",
                         message: "An image file is required",

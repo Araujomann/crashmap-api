@@ -650,3 +650,28 @@ export const accidentImageResponseSchema = {
         data: accidentImageSchema,
     },
 } as const;
+
+/**
+ * Filtros da listagem de `GET /accidents`. Converte os números da query
+ * (página, limites do mapa) antes de chegarem ao banco. `page` e `limit` são
+ * ajustados pelo service (mínimo 1, `limit` no máximo 50), por isso não têm
+ * limites aqui.
+ */
+export const accidentsListQuerySchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        page: { type: "integer" },
+        limit: { type: "integer" },
+        search: { type: "string" },
+        severity: accidentSeveritySchema,
+        status: accidentModerationStatusSchema,
+        sort: { type: "string", enum: ["newest", "oldest"] },
+        from: { type: "string", format: "date-time" },
+        to: { type: "string", format: "date-time" },
+        minLat: { type: "number", minimum: -90, maximum: 90 },
+        maxLat: { type: "number", minimum: -90, maximum: 90 },
+        minLng: { type: "number", minimum: -180, maximum: 180 },
+        maxLng: { type: "number", minimum: -180, maximum: 180 },
+    },
+} as const;
