@@ -388,13 +388,22 @@ test("gamification counts only the authenticated user's approved app reports", a
                 },
             });
             accidentIds.push(accident.id);
+            return accident;
         };
 
-        await createReport(firstUser.id, "first-approved", "APPROVED");
+        const firstApproved = await createReport(
+            firstUser.id,
+            "first-approved",
+            "APPROVED",
+        );
         await createReport(firstUser.id, "pending", "PENDING");
         await createReport(firstUser.id, "non-app", "APPROVED", "PRF");
         await createReport(secondUser.id, "second-approved-1", "APPROVED");
         await createReport(secondUser.id, "second-approved-2", "APPROVED");
+        // O segundo usuário confia no relato aprovado do primeiro.
+        await prisma.accidentTrustVote.create({
+            data: { accident_id: firstApproved.id, created_by_id: secondUser.id },
+        });
 
         const missingAuthResponse = await app.inject({
             method: "GET",
@@ -412,6 +421,7 @@ test("gamification counts only the authenticated user's approved app reports", a
         assert.equal(firstStatsResponse.statusCode, 200);
         assert.deepEqual(firstStatsResponse.json().data, {
             approved_reports_count: 1,
+            received_trust_votes_count: 1,
         });
 
         const secondStatsResponse = await app.inject({
@@ -424,6 +434,7 @@ test("gamification counts only the authenticated user's approved app reports", a
         assert.equal(secondStatsResponse.statusCode, 200);
         assert.deepEqual(secondStatsResponse.json().data, {
             approved_reports_count: 2,
+            received_trust_votes_count: 0,
         });
     } finally {
         if (accidentIds.length > 0) {

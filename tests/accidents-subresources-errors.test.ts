@@ -35,6 +35,8 @@ test("accident comments reject missing auth and unknown accidents", async () => 
     const app = await buildApp();
     await app.ready();
 
+    let userId: string | undefined;
+
     try {
         const missingAuthResponse = await app.inject({
             method: "POST",
@@ -67,6 +69,13 @@ test("accident comments reject missing auth and unknown accidents", async () => 
         assert.equal(registerResponse.statusCode, 201);
         const accessToken = registerResponse.json().data.tokens
             .accessToken as string;
+        userId = registerResponse.json().data.user.id as string;
+
+        // Comentar exige e-mail verificado.
+        await prisma.user.updateMany({
+            where: { id: { in: [userId] } },
+            data: { is_email_verified: true },
+        });
 
         const notFoundResponse = await app.inject({
             method: "POST",
@@ -82,6 +91,11 @@ test("accident comments reject missing auth and unknown accidents", async () => 
         assert.equal(notFoundResponse.statusCode, 404);
         assert.equal(notFoundResponse.json().error.code, "ACCIDENT_NOT_FOUND");
     } finally {
+        if (userId) {
+            await prisma.refreshToken.deleteMany({ where: { user_id: userId } });
+            await prisma.user.deleteMany({ where: { id: userId } });
+        }
+
         await app.close();
     }
 });
@@ -137,6 +151,12 @@ test("accident comments and images reject other-user deletes", async () => {
             .accessToken as string;
         intruderUserId = intruderRegisterResponse.json().data.user.id as string;
 
+        // Criar relatos e comentar exige e-mail verificado.
+        await prisma.user.updateMany({
+            where: { id: { in: [ownerUserId, intruderUserId] } },
+            data: { is_email_verified: true },
+        });
+
         const accidentResponse = await app.inject({
             method: "POST",
             url: "/accidents",
@@ -157,6 +177,12 @@ test("accident comments and images reject other-user deletes", async () => {
 
         assert.equal(accidentResponse.statusCode, 201);
         accidentId = accidentResponse.json().data.id as string;
+
+        // Comentários e imagens só existem em relatos aprovados.
+        await prisma.accident.update({
+            where: { id: accidentId },
+            data: { moderation_status: "APPROVED" },
+        });
 
         const commentResponse = await app.inject({
             method: "POST",
