@@ -8,6 +8,8 @@ Optamos por uma arquitetura híbrida, combinando organização por funcionalidad
 
 Essa abordagem mantém o projeto organizado sem adicionar complexidade desnecessária.
 
+Stack: Node.js + TypeScript, Fastify 5, Prisma 6 (PostgreSQL), testes com `node:test` executados via `tsx`.
+
 ---
 
 # Estrutura do projeto
@@ -19,10 +21,10 @@ src/
 │   ├── accidents/       relatos, mapa, estatísticas, moderação, comentários, imagens, confiança
 │   ├── admin/           monta as rotas de /admin (nega por padrão)
 │   ├── audit/           trilha de auditoria administrativa
-│   ├── auth/            cadastro, login, sessões, verificação de e-mail, recuperação de senha
+│   ├── auth/            cadastro, login, sessões, tokens, permissões, verificação de e-mail, recuperação de senha
 │   ├── health/          GET /health
 │   ├── moderation/      histórico de decisões de moderação
-│   ├── notifications/   avisos administrativos e push
+│   ├── notifications/   avisos administrativos e push (Expo)
 │   ├── prf-sync/        sincronização com os dados abertos da PRF (docs/PRF_SYNC.md)
 │   ├── settings/        configurações da plataforma
 │   ├── team/            convites e equipe de moderação
@@ -32,15 +34,21 @@ src/
 │   ├── config/          variáveis de ambiente
 │   ├── database/        cliente único do Prisma
 │   ├── errors/          AppError
-│   ├── http/            formatos de resposta, paginação, erros, limites, documentação
+│   ├── http/            formatos de resposta, paginação, tratamento de erros, limites, documentação
 │   ├── security/        HMAC, SHA-256, código de 6 dígitos
-│   ├── services/        integrações externas (mail, storage)
+│   ├── services/        integrações externas (mail, storage/Cloudinary)
 │   ├── utils/           funções genéricas (HTML, e-mail, intervalo de datas)
 │   └── scripts/         tarefas de linha de comando (PRF, papéis)
 │
 ├── types/               extensões de tipos do Fastify
 ├── app.ts               monta a aplicação (plugins, erros, rotas)
 └── server.ts            sobe o servidor
+
+prisma/
+├── schema.prisma        modelo de dados (cliente gerado em generated/prisma)
+└── migrations/
+
+tests/                   testes de integração e snapshot do contrato da API
 ```
 
 ---
@@ -66,18 +74,18 @@ modules/
     auth/
     users/
     accidents/
-    comments/
+    notifications/
 ```
 
 Cada módulo é responsável apenas pela sua própria regra de negócio.
 
-Por exemplo, tudo relacionado à autenticação ficará dentro de:
+Por exemplo, tudo relacionado à autenticação fica dentro de:
 
 ```text
 modules/auth/
 ```
 
-Enquanto tudo relacionado aos acidentes ficará em:
+Enquanto tudo relacionado aos acidentes fica em:
 
 ```text
 modules/accidents/
@@ -87,7 +95,7 @@ modules/accidents/
 
 # Estrutura interna de um módulo
 
-Cada módulo pode possuir arquivos como:
+Um módulo típico possui arquivos como:
 
 ```text
 auth/
@@ -97,9 +105,9 @@ auth/
 └── auth.types.ts
 ```
 
-Nem todos os módulos precisam possuir exatamente esses arquivos.
+Nem todos os módulos possuem exatamente esses arquivos.
 
-Cada módulo terá apenas aquilo que realmente precisar.
+Cada módulo tem apenas aquilo que realmente precisa (por exemplo, `health/` tem só controller e service; `admin/` tem só `admin.plugin.ts`; `prf-sync/` não tem controller, pois é executado por linha de comando).
 
 Quando um módulo cresce, ele é dividido por assunto, não por camada. Exemplo do módulo de acidentes:
 
@@ -127,57 +135,50 @@ Arquivos auxiliares opcionais:
 - `*.mapper.ts`: converte o registro do Prisma no formato da resposta;
 - `*.filters.ts`: monta trechos de `where` repetidos entre consultas;
 - `*.access.ts`: regras de acesso compartilhadas pelos services do módulo;
-- `*.errors.ts`: erros específicos do módulo.
+- `*.errors.ts`: erros específicos do módulo (ex.: `auth.errors.ts` com `AuthError`);
+- `*.guard.ts`: `preHandler`s de autenticação e permissão (`auth.guard.ts`);
+- `*.plugin.ts`: plugin Fastify que agrupa rotas de outros módulos (`admin.plugin.ts`);
+- `*.cli.ts`: ponto de entrada de tarefa de linha de comando (`prf-sync.cli.ts`).
 
 ---
 
 # Responsabilidade de cada arquivo
 
-## Routes
+## Rotas e controller
 
 No CrashMap, as rotas são registradas no próprio controller (o padrão de plugins do Fastify): cada `*.controller.ts` exporta um plugin, ou funções `registerXRoutes(app)`, que declaram método, caminho, guards (`preHandler`), schema e handler.
 
 Exemplo:
 
 ```
-POST /login
-POST /register
+POST /auth/login
+POST /auth/register
 ```
 
-As rotas apenas encaminham a requisição para o service.
+O controller faz a comunicação entre o Fastify e a aplicação. Suas responsabilidades são:
 
-Não possuem regra de negócio.
-
----
-
-## Controller
-
-O controller faz a comunicação entre o Fastify e a aplicação.
-
-Suas responsabilidades são:
-
-- receber a requisição;
-- validar os dados recebidos (quando necessário);
+- declarar a rota, seus guards e seu schema;
+- receber a requisição (a validação é feita pelo Fastify a partir do schema);
 - chamar o service;
 - retornar a resposta HTTP.
 
-O controller **nunca acessa o banco de dados diretamente**.
+O controller **não acessa o banco de dados diretamente** e não possui regra de negócio.
 
 ---
 
 ## Service
 
-O service contém toda a regra de negócio.
+O service contém a regra de negócio.
 
 Exemplos:
 
 - validar senha;
-- verificar permissões;
+- verificar permissões sobre um recurso;
 - criar usuários;
-- gerar tokens JWT;
+- emitir tokens de acesso;
 - registrar acidentes.
 
-Sempre que houver lógica da aplicação, ela deverá ficar no service.
+É nele que fica o acesso ao banco via Prisma.
 
 ---
 
@@ -185,7 +186,7 @@ Sempre que houver lógica da aplicação, ela deverá ficar no service.
 
 Responsável pela validação utilizando JSON Schema do Fastify: o mesmo schema valida a entrada (body, query, params), filtra a resposta e gera a documentação em `/docs`.
 
-Cada módulo possui seus próprios schemas. Os controllers não declaram schemas inline: eles importam do `*.schema.ts` do módulo. Trechos usados por vários módulos (paginação, `security`, `:id` UUID) ficam em `shared/http/api-response.ts`.
+A maioria dos módulos tem seu próprio `*.schema.ts`, importado pelos controllers. Módulos pequenos (`health`, `moderation`) e alguns trechos de `users.controller.ts` ainda declaram o schema no próprio controller. Trechos usados por vários módulos (paginação, `security`, `:id` UUID) ficam em `shared/http/api-response.ts`.
 
 Exemplo:
 
@@ -201,13 +202,9 @@ createAccidentBodySchema
 
 ## Types
 
-Tipos específicos daquele módulo.
+Tipos específicos daquele módulo (`*.types.ts`).
 
-Caso um tipo seja utilizado por vários módulos, ele deve ser movido para:
-
-```text
-shared/types
-```
+As extensões de tipos do Fastify (`request.authUser`, `config.permission`) ficam em `src/types/fastify.d.ts`.
 
 ---
 
@@ -221,23 +218,13 @@ Ela existe para evitar duplicação de código.
 
 ## Config
 
-Arquivos de configuração.
-
-Exemplos:
-
-- variáveis de ambiente;
-- configuração de autenticação;
-- constantes globais.
+`shared/config/env.ts`: leitura e validação das variáveis de ambiente.
 
 ---
 
 ## Database
 
 Responsável pelo acesso ao banco de dados.
-
-O cliente do Prisma ficará aqui.
-
-Exemplo:
 
 ```text
 shared/database/prisma.ts
@@ -247,42 +234,44 @@ Existe apenas uma instância do PrismaClient para toda a aplicação.
 
 ---
 
-## Middleware
+## HTTP
 
-Middlewares reutilizados pela aplicação.
+Recursos ligados ao Fastify usados pela aplicação inteira:
 
-Exemplos:
+- `api-response.ts`: schemas de resposta, paginação, `security`, `:id` UUID;
+- `pagination.ts`: cálculo de `page`, `limit`, `totalPages`;
+- `error-handler.ts`: converte qualquer erro no formato `{ error: { code, message, statusCode } }`;
+- `rate-limits.ts`: limites de tentativas e resposta `429 RATE_LIMITED`;
+- `api-docs.ts`: Swagger/OpenAPI em `/docs`.
 
-- autenticação;
-- tratamento de erros;
-- validação.
+Os guards de autenticação e permissão não ficam em `shared`: estão em `modules/auth/auth.guard.ts`.
+
+---
+
+## Security
+
+`shared/security/crypto.ts`: HMAC, SHA-256 e geração de código de 6 dígitos.
 
 ---
 
 ## Services
 
-Integrações com serviços externos.
+Integrações com serviços externos que não pertencem a um módulo específico:
 
-Exemplos:
+- `services/mail/mailer.ts`: envio de e-mails (SMTP via Nodemailer ou API HTTP da Brevo);
+- `services/storage/cloudinary.ts`: armazenamento de imagens no Cloudinary.
 
-- Cloudinary;
-- envio de e-mails;
-- armazenamento de arquivos;
-- notificações push.
-
-Esses serviços não pertencem a um módulo específico.
+As notificações push (Expo) ficam no módulo `notifications`, pois são usadas só por ele.
 
 ---
 
 ## Utils
 
-Funções utilitárias reutilizáveis.
+Funções utilitárias genéricas:
 
-Exemplos:
-
-- geração de hash;
-- geração de JWT;
-- manipulação de datas.
+- `date-range.ts`: intervalo de dias em UTC;
+- `email.ts`: normalização de e-mail;
+- `html.ts`: escape de texto em templates de e-mail.
 
 Importante:
 
@@ -292,38 +281,31 @@ A pasta `utils` nunca deve conter regra de negócio.
 
 ## Errors
 
-Classes de erro personalizadas.
+`shared/errors/app-error.ts`: classe `AppError` (status, código e mensagem), base dos erros tratados pelo `error-handler`.
 
-Exemplo:
-
-```text
-AppError
-AuthenticationError
-ValidationError
-```
+Erros específicos de um módulo ficam no próprio módulo (ex.: `AuthError` em `modules/auth/auth.errors.ts`).
 
 ---
 
-## Types
+## Scripts
 
-Tipos compartilhados por toda a aplicação.
+Tarefas de linha de comando, expostas no `package.json`:
+
+- `pnpm import:prf` / `pnpm sync:prf`: importação e sincronização dos dados da PRF;
+- `pnpm admin:grant-role <email> <papel>`: concede papel a uma conta, com auditoria.
 
 ---
 
 # Fluxo de uma requisição
 
-Toda requisição deve seguir este fluxo:
+Toda requisição segue este fluxo:
 
 ```text
 Cliente
 
 ↓
 
-Route
-
-↓
-
-Controller
+Controller (rota + guards + schema)
 
 ↓
 
@@ -388,6 +370,7 @@ Antes de escrever de novo, use o que já existe:
 | HMAC, SHA-256, código de 6 dígitos | `shared/security/crypto.ts` |
 | Enviar e-mail | `shared/services/mail/mailer.ts` |
 | Encerrar todas as sessões de uma conta | `modules/auth/sessions.ts` (`revokeAllSessions`) |
+| Exigir autenticação/permissão em uma rota | `modules/auth/auth.guard.ts` |
 | Gravar auditoria administrativa | `modules/audit/audit.service.ts` (`recordAudit`) |
 
 ---
@@ -421,14 +404,12 @@ Entretanto, o CrashMap possui diversos domínios independentes, como:
 
 - autenticação;
 - usuários;
-- acidentes;
-- imagens;
-- comentários;
+- acidentes (com imagens, comentários e votos de confiança);
 - notificações;
 - moderação;
-- dashboard;
-- integração com dados da PRF;
-- geolocalização utilizando PostGIS.
+- equipe e convites;
+- auditoria;
+- integração com dados da PRF.
 
 À medida que esses módulos crescem, uma arquitetura organizada apenas por tipo de arquivo tende a espalhar o código em muitas pastas diferentes.
 
@@ -444,7 +425,7 @@ Essa abordagem oferece um bom equilíbrio entre simplicidade, organização e es
 
 - Cada módulo possui uma única responsabilidade.
 - Controllers não possuem regra de negócio.
-- Services concentram toda a lógica da aplicação.
+- Services concentram a lógica da aplicação.
 - O acesso ao banco ocorre apenas através do Prisma.
 - Recursos compartilhados ficam em `shared`.
 - Evitamos duplicação de código.
