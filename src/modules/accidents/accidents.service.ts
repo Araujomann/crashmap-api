@@ -6,7 +6,12 @@ import {
     resolvePagination,
 } from "../../shared/http/pagination.js";
 import type { AuthUser } from "../auth/auth.types.js";
-import { NO_AUDIT_CONTEXT, type AuditContext } from "../audit/audit.service.js";
+import { can } from "../auth/permissions.js";
+import {
+    NO_AUDIT_CONTEXT,
+    recordAudit,
+    type AuditContext,
+} from "../audit/audit.service.js";
 import {
     accidentNotFoundError,
     auditStaffActionOnContent,
@@ -52,6 +57,14 @@ function parseOccurredAt(value: string): Date {
     }
 
     return occurredAt;
+}
+
+function moderatedAccidentEditError() {
+    return new AppError(
+        "Moderated accidents cannot be edited",
+        409,
+        "ACCIDENT_ALREADY_MODERATED",
+    );
 }
 
 function ensureUpdatePayload(input: UpdateAccidentBody) {
@@ -401,9 +414,24 @@ export async function updateAccident(
         );
     }
 
+    // O autor só edita enquanto o relato aguarda moderação: depois da decisão,
+    // uma edição mudaria o conteúdo público sem nova revisão. A staff continua
+    // podendo corrigir relatos moderados (a edição é auditada abaixo).
+    // Permissão antes do status, como na exclusão.
+    const authorEditOnly = !can(user, "reports:moderate");
+
+    if (authorEditOnly && currentAccident.moderation_status !== "PENDING") {
+        throw moderatedAccidentEditError();
+    }
+
     const accident = await prisma.$transaction(async (transaction) => {
-        const updated = await transaction.accident.update({
-            where: { id: accidentId },
+        // Condição no próprio UPDATE: se a moderação decidir entre a leitura
+        // acima e esta escrita, a edição do autor é recusada.
+        const changed = await transaction.accident.updateMany({
+            where: {
+                id: accidentId,
+                ...(authorEditOnly ? { moderation_status: "PENDING" as const } : {}),
+            },
             data: {
                 tipo_acidente: input.tipo_acidente?.trim(),
                 classificacao_acidente: input.classificacao_acidente,
@@ -422,21 +450,44 @@ export async function updateAccident(
             },
         });
 
-        await auditStaffActionOnContent(
-            transaction,
-            user,
-            currentAccident.created_by_id,
-            {
-                action: "REPORT_EDITED_BY_STAFF",
-                targetType: "accident",
-                targetId: accidentId,
-                metadata: {
-                    author_id: currentAccident.created_by_id,
-                    ...auditedFieldChanges(currentAccident, updated),
-                },
+        if (changed.count !== 1) {
+            throw authorEditOnly
+                ? moderatedAccidentEditError()
+                : accidentNotFoundError();
+        }
+
+        const updated = await transaction.accident.findUniqueOrThrow({
+            where: { id: accidentId },
+        });
+
+        const staffEditEntry = {
+            action: "REPORT_EDITED_BY_STAFF" as const,
+            targetType: "accident" as const,
+            targetId: accidentId,
+            metadata: {
+                author_id: currentAccident.created_by_id,
+                ...auditedFieldChanges(currentAccident, updated),
             },
-            auditContext,
-        );
+        };
+
+        // Relato já moderado só é editável pela staff, inclusive quando ela é
+        // a autora: essa edição muda conteúdo revisado e sempre vai para a
+        // auditoria. O status é o do momento da escrita (`updated`).
+        if (updated.moderation_status !== "PENDING") {
+            await recordAudit(
+                transaction,
+                { actorId: user.id, ...staffEditEntry },
+                auditContext,
+            );
+        } else {
+            await auditStaffActionOnContent(
+                transaction,
+                user,
+                currentAccident.created_by_id,
+                staffEditEntry,
+                auditContext,
+            );
+        }
 
         return updated;
     });

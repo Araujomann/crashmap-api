@@ -186,8 +186,77 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
         assert.equal(deleteResponse.statusCode, 403);
         assert.equal(deleteResponse.json().error.code, "ACCIDENT_FORBIDDEN");
 
+        // Enquanto aguarda moderação, o dono edita normalmente.
+        const ownerPendingEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${accidentId}`,
+            headers: { authorization: `Bearer ${ownerAccessToken}` },
+            payload: { description: "Edited while pending" },
+        });
+
+        assert.equal(ownerPendingEdit.statusCode, 200, ownerPendingEdit.body);
+        assert.equal(
+            ownerPendingEdit.json().data.description,
+            "Edited while pending",
+        );
+
         // Relato já moderado: quem não é o dono continua recebendo 403 (não
         // descobre o status); o dono recebe 409.
+        await prisma.accident.update({
+            where: { id: accidentId },
+            data: { moderation_status: "APPROVED" },
+        });
+
+        const intruderModeratedEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${accidentId}`,
+            headers: { authorization: `Bearer ${intruderAccessToken}` },
+            payload: { description: "Unauthorized update" },
+        });
+
+        assert.equal(intruderModeratedEdit.statusCode, 403);
+        assert.equal(
+            intruderModeratedEdit.json().error.code,
+            "ACCIDENT_FORBIDDEN",
+        );
+
+        // O conteúdo aprovado é público: o dono não o altera sem nova revisão.
+        const ownerApprovedEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${accidentId}`,
+            headers: { authorization: `Bearer ${ownerAccessToken}` },
+            payload: { description: "Edited after approval" },
+        });
+
+        assert.equal(ownerApprovedEdit.statusCode, 409);
+        assert.equal(
+            ownerApprovedEdit.json().error.code,
+            "ACCIDENT_ALREADY_MODERATED",
+        );
+
+        const afterApprovedEdit = await prisma.accident.findUniqueOrThrow({
+            where: { id: accidentId },
+        });
+        assert.equal(afterApprovedEdit.description, "Edited while pending");
+
+        await prisma.accident.update({
+            where: { id: accidentId },
+            data: { moderation_status: "REJECTED" },
+        });
+
+        const ownerRejectedEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${accidentId}`,
+            headers: { authorization: `Bearer ${ownerAccessToken}` },
+            payload: { description: "Edited after rejection" },
+        });
+
+        assert.equal(ownerRejectedEdit.statusCode, 409);
+        assert.equal(
+            ownerRejectedEdit.json().error.code,
+            "ACCIDENT_ALREADY_MODERATED",
+        );
+
         await prisma.accident.update({
             where: { id: accidentId },
             data: { moderation_status: "APPROVED" },

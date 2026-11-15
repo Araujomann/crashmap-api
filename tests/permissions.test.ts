@@ -122,6 +122,7 @@ test("staff routes enforce authentication, verified email and permissions", asyn
     };
     let otherUserHeaders: Record<string, string> = {};
     let accidentId: string | undefined;
+    let moderatorOwnAccidentId: string | undefined;
 
     async function registerAs(
         label: string,
@@ -259,9 +260,111 @@ test("staff routes enforce authentication, verified email and permissions", asyn
             payload: { description: "Revisado pela moderação" },
         });
         assert.equal(moderatorEdit.statusCode, 200, moderatorEdit.body);
+
+        // Depois da aprovação, o autor não edita mais; a staff continua
+        // podendo corrigir o relato (edição auditada).
+        await prisma.accident.update({
+            where: { id: accidentId },
+            data: { moderation_status: "APPROVED" },
+        });
+
+        const authorApprovedEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${accidentId}`,
+            headers: headers.user,
+            payload: { description: "Alteração do autor após aprovação" },
+        });
+        assert.equal(authorApprovedEdit.statusCode, 409);
+        assert.equal(
+            authorApprovedEdit.json().error.code,
+            "ACCIDENT_ALREADY_MODERATED",
+        );
+
+        const moderatorApprovedEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${accidentId}`,
+            headers: headers.moderator,
+            payload: { description: "Correção da moderação após aprovação" },
+        });
+        assert.equal(
+            moderatorApprovedEdit.statusCode,
+            200,
+            moderatorApprovedEdit.body,
+        );
+        assert.equal(
+            moderatorApprovedEdit.json().data.moderation_status,
+            "APPROVED",
+        );
+
+        const staffEditAudits = await prisma.adminAuditLog.count({
+            where: {
+                action: "REPORT_EDITED_BY_STAFF",
+                target_id: accidentId,
+            },
+        });
+        assert.equal(staffEditAudits, 2);
+
+        // Moderador autor do relato: enquanto pendente, editar o próprio
+        // relato não é ação de staff; depois de moderado, a edição é auditada.
+        const moderatorOwn = await app.inject({
+            method: "POST",
+            url: "/accidents",
+            headers: headers.moderator,
+            payload: {
+                tipo_acidente: `perm-own-${suffix}`,
+                classificacao_acidente: "sem_vitima",
+                condicao_meteorologica: "ceu_claro",
+                description: "Relato do próprio moderador",
+                latitude: -5.52,
+                longitude: -47.47,
+                occurredAt: "2026-11-10T12:00:00.000Z",
+                severity: "low",
+            },
+        });
+        assert.equal(moderatorOwn.statusCode, 201, moderatorOwn.body);
+        moderatorOwnAccidentId = moderatorOwn.json().data.id as string;
+
+        const ownPendingEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${moderatorOwnAccidentId}`,
+            headers: headers.moderator,
+            payload: { description: "Ajuste antes da moderação" },
+        });
+        assert.equal(ownPendingEdit.statusCode, 200, ownPendingEdit.body);
+
+        await prisma.accident.update({
+            where: { id: moderatorOwnAccidentId },
+            data: { moderation_status: "APPROVED" },
+        });
+
+        const ownApprovedEdit = await app.inject({
+            method: "PATCH",
+            url: `/accidents/${moderatorOwnAccidentId}`,
+            headers: headers.moderator,
+            payload: { description: "Ajuste depois da aprovação" },
+        });
+        assert.equal(ownApprovedEdit.statusCode, 200, ownApprovedEdit.body);
+
+        const ownEditAudits = await prisma.adminAuditLog.findMany({
+            where: {
+                action: "REPORT_EDITED_BY_STAFF",
+                target_id: moderatorOwnAccidentId,
+            },
+        });
+        assert.equal(ownEditAudits.length, 1);
+        assert.deepEqual(ownEditAudits[0].metadata, {
+            author_id: moderatorOwn.json().data.created_by_id,
+            before: { description: "Ajuste antes da moderação" },
+            after: { description: "Ajuste depois da aprovação" },
+        });
     } finally {
         if (accidentId) {
             await prisma.accident.deleteMany({ where: { id: accidentId } });
+        }
+        if (moderatorOwnAccidentId) {
+            await prisma.accident.deleteMany({
+                where: { id: moderatorOwnAccidentId },
+            });
         }
         // A edição feita pelo moderador gera auditoria, que referencia a conta.
         const testUsers = await prisma.user.findMany({
