@@ -11,7 +11,9 @@ test("getAccidentOverview aggregates only approved accidents", async () => {
     });
 
     const now = new Date();
-    const before = await getAccidentOverview(now);
+    // Só os registros deste teste: outros testes criam e apagam acidentes
+    // aprovados em paralelo no mesmo banco, o que distorceria totais globais.
+    const scope = { tipo_acidente: { startsWith: marker } };
 
     try {
         await prisma.accident.createMany({
@@ -49,47 +51,20 @@ test("getAccidentOverview aggregates only approved accidents", async () => {
             ],
         });
 
-        const after = await getAccidentOverview(now);
+        const overview = await getAccidentOverview(now, scope);
 
+        assert.equal(overview.approved_accidents_count, 2);
+        assert.equal(overview.accidents_with_victims_count, 1);
+        assert.equal(overview.high_severity_accidents_count, 2);
+        assert.equal(overview.current_30_days_count, 1);
+        assert.equal(overview.previous_30_days_count, 1);
         assert.equal(
-            after.approved_accidents_count - before.approved_accidents_count,
-            2,
-        );
-        assert.equal(
-            after.accidents_with_victims_count -
-                before.accidents_with_victims_count,
+            overview.time_of_day.reduce((total, period) => total + period.count, 0),
             1,
         );
-        assert.equal(
-            after.high_severity_accidents_count -
-                before.high_severity_accidents_count,
-            2,
-        );
-        assert.equal(
-            after.current_30_days_count - before.current_30_days_count,
-            1,
-        );
-        assert.equal(
-            after.previous_30_days_count - before.previous_30_days_count,
-            1,
-        );
-        assert.equal(
-            after.time_of_day.reduce((total, period) => total + period.count, 0) -
-                before.time_of_day.reduce(
-                    (total, period) => total + period.count,
-                    0,
-                ),
-            1,
-        );
-        assert.ok(
-            after.recent_accidents.some((accident) =>
-                accident.tipo_acidente.includes(`${marker} current`),
-            ),
-        );
-        assert.ok(
-            !after.recent_accidents.some((accident) =>
-                accident.tipo_acidente.includes(`${marker} pending`),
-            ),
+        assert.deepEqual(
+            overview.recent_accidents.map((accident) => accident.tipo_acidente),
+            [`${marker} current`, `${marker} previous`],
         );
     } finally {
         await prisma.accident.deleteMany({

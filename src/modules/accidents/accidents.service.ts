@@ -1,4 +1,7 @@
-import type { Accident as AccidentRecord } from "../../../generated/prisma/client.js";
+import type {
+    Accident as AccidentRecord,
+    Prisma,
+} from "../../../generated/prisma/client.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import {
@@ -197,14 +200,21 @@ export async function getAccidentsMapVersion(): Promise<AccidentMapVersion> {
     };
 }
 
+/**
+ * Resumo público dos acidentes aprovados. `scope` restringe o universo
+ * (a rota pública não usa; os testes usam para medir só os próprios
+ * registros, sem depender de outros testes que rodam em paralelo no mesmo
+ * banco).
+ */
 export async function getAccidentOverview(
     now = new Date(),
+    scope: Prisma.AccidentWhereInput = {},
 ): Promise<AccidentOverview> {
     const currentPeriodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const previousPeriodStart = new Date(
         now.getTime() - 60 * 24 * 60 * 60 * 1000,
     );
-    const approvedFilter = { moderation_status: "APPROVED" as const };
+    const approvedFilter = { ...scope, moderation_status: "APPROVED" as const };
 
     const [
         approvedCount,
