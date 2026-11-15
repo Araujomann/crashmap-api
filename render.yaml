@@ -8,6 +8,8 @@ services:
       plan: free
       region: virginia
       branch: development
+      # Só publica depois que os checks do GitHub (workflow CI) passarem.
+      autoDeployTrigger: checksPass
       # O plano gratuito não tem "pre-deploy command"; por isso as migrations
       # rodam no fim do build, depois de compilar. `--prod=false` garante as
       # devDependencies (TypeScript) mesmo com NODE_ENV=production.
