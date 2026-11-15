@@ -5243,7 +5243,7 @@
                         "string",
                         "null"
                       ],
-                      "maxLength": 4000
+                      "maxLength": 1000
                     }
                   }
                 }
@@ -5938,7 +5938,7 @@
                     },
                     "description": {
                       "type": "string",
-                      "maxLength": 4000
+                      "maxLength": 1000
                     },
                     "latitude": {
                       "type": "number",
@@ -6665,7 +6665,7 @@
                         "string",
                         "null"
                       ],
-                      "maxLength": 4000
+                      "maxLength": 1000
                     },
                     "latitude": {
                       "type": "number",

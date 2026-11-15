@@ -146,7 +146,7 @@ export const createAccidentBodySchema = {
             type: "string",
             enum: ["ceu_claro", "chuva", "nublado", "garoa"],
         },
-        description: { type: "string", maxLength: 4000 },
+        description: { type: "string", maxLength: 1000 },
         latitude: { type: "number", minimum: -90, maximum: 90 },
         longitude: { type: "number", minimum: -180, maximum: 180 },
         occurredAt: { type: "string", format: "date-time" },
@@ -176,7 +176,7 @@ export const updateAccidentBodySchema = {
             type: "string",
             enum: ["ceu_claro", "chuva", "nublado", "garoa"],
         },
-        description: { type: ["string", "null"], maxLength: 4000 },
+        description: { type: ["string", "null"], maxLength: 1000 },
         latitude: { type: "number", minimum: -90, maximum: 90 },
         longitude: { type: "number", minimum: -180, maximum: 180 },
         occurredAt: { type: "string", format: "date-time" },
@@ -483,7 +483,7 @@ export const editPendingAccidentBodySchema = {
     minProperties: 1,
     properties: {
         tipo_acidente: { type: "string", minLength: 3, maxLength: 180 },
-        description: { type: ["string", "null"], maxLength: 4000 },
+        description: { type: ["string", "null"], maxLength: 1000 },
     },
 } as const;
 
