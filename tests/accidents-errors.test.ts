@@ -52,6 +52,7 @@ test("accidents routes reject missing auth and invalid create payloads", async (
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Accident Errors User ${uniqueSuffix}`,
                 email,
                 password,
@@ -108,6 +109,7 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Owner User ${uniqueSuffix}`,
                 email: ownerEmail,
                 password,
@@ -123,6 +125,7 @@ test("accidents ownership rules reject other-user updates and deletes", async ()
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Intruder User ${uniqueSuffix}`,
                 email: intruderEmail,
                 password,

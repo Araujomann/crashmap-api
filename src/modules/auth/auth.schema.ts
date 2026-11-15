@@ -1,13 +1,20 @@
 import { PERMISSIONS } from "./permissions.js";
 
+/** Versão dos Termos/Política: data de publicação dos textos (AAAA-MM-DD). */
+export const termsVersionSchema = {
+    type: "string",
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+} as const;
+
 export const registerBodySchema = {
     type: "object",
     additionalProperties: false,
-    required: ["name", "email", "password"],
+    required: ["name", "email", "password", "acceptedTermsVersion"],
     properties: {
         name: { type: "string", minLength: 2, maxLength: 120 },
         email: { type: "string", format: "email", maxLength: 255 },
         password: { type: "string", minLength: 8, maxLength: 128 },
+        acceptedTermsVersion: termsVersionSchema,
     },
 } as const;
 
@@ -126,7 +133,7 @@ export const refreshBodySchema = {
 export const authUserSchema = {
     type: "object",
     additionalProperties: false,
-    required: ["id", "name", "email", "role", "permissions", "is_email_verified", "email_verified_at", "created_at", "updated_at"],
+    required: ["id", "name", "email", "role", "permissions", "is_email_verified", "email_verified_at", "terms_version", "terms_accepted_at", "created_at", "updated_at"],
     properties: {
         id: { type: "string" },
         name: { type: "string" },
@@ -138,6 +145,8 @@ export const authUserSchema = {
         },
         is_email_verified: { type: "boolean" },
         email_verified_at: { type: ["string", "null"], format: "date-time" },
+        terms_version: { type: ["string", "null"] },
+        terms_accepted_at: { type: ["string", "null"], format: "date-time" },
         created_at: { type: "string", format: "date-time" },
         updated_at: { type: "string", format: "date-time" },
     },

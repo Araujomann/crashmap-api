@@ -20,6 +20,7 @@ test("register rejects duplicate emails", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name,
                 email,
                 password,
@@ -33,6 +34,7 @@ test("register rejects duplicate emails", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Another ${name}`,
                 email,
                 password,
@@ -71,6 +73,7 @@ test("login rejects invalid credentials", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Login Test User ${uniqueSuffix}`,
                 email,
                 password,
@@ -168,6 +171,7 @@ test("users me rejects invalid payloads", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Validation Test User ${uniqueSuffix}`,
                 email,
                 password,

@@ -33,6 +33,12 @@ export const RATE_LIMITS = {
         timeWindow: "15 minutes",
         keyGenerator: (request) => `password-reset:${request.ip}`,
     },
+    /** Exportação dos dados pessoais (consulta pesada), por IP. */
+    dataExport: {
+        max: 5,
+        timeWindow: "1 hour",
+        keyGenerator: (request) => `data-export:${request.ip}`,
+    },
     /** Aceite de convite de moderador, por IP. */
     inviteAccept: {
         max: 10,

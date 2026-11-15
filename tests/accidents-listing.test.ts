@@ -87,6 +87,7 @@ test("GET /accidents converts query filters and rejects invalid ones", async () 
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: "Listing Staff",
                 email: `listing-staff-${Date.now()}@example.com`,
                 password: "Test12345!",

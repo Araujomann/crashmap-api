@@ -5,6 +5,10 @@ export interface UpdateMeBody {
     name: string;
 }
 
+export interface AcceptTermsBody {
+    version: string;
+}
+
 export interface DeleteMeBody {
     password?: string;
 }

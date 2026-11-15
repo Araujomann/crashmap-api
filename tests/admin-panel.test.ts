@@ -23,7 +23,7 @@ test("user management, audit log, platform settings and grant-role script", asyn
         const response = await app.inject({
             method: "POST",
             url: "/auth/register",
-            payload: { name: `Panel ${label}`, email, password },
+            payload: { acceptedTermsVersion: "2026-11-15", name: `Panel ${label}`, email, password },
         });
         assert.equal(response.statusCode, 201, response.body);
         const { user, tokens } = response.json().data;

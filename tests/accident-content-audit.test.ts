@@ -24,7 +24,7 @@ test("comment and image deletes respect ownership and audit staff actions", asyn
         const response = await app.inject({
             method: "POST",
             url: "/auth/register",
-            payload: { name: `Audit ${label}`, email, password: "Test12345!" },
+            payload: { acceptedTermsVersion: "2026-11-15", name: `Audit ${label}`, email, password: "Test12345!" },
         });
         assert.equal(response.statusCode, 201, response.body);
         const { user, tokens } = response.json().data;

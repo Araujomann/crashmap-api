@@ -59,6 +59,7 @@ test(
                 method: "POST",
                 url: "/auth/register",
                 payload: {
+                    acceptedTermsVersion: "2026-11-15",
                     name: "Upload Test User",
                     email,
                     password,

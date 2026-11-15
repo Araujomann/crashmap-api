@@ -16,7 +16,7 @@ test("DELETE /users/me requires the password and removes the account", async () 
         const registerResponse = await app.inject({
             method: "POST",
             url: "/auth/register",
-            payload: { name: `Delete Me ${uniqueSuffix}`, email, password },
+            payload: { acceptedTermsVersion: "2026-11-15", name: `Delete Me ${uniqueSuffix}`, email, password },
         });
 
         assert.equal(registerResponse.statusCode, 201);
@@ -87,7 +87,7 @@ test("DELETE /users/me refuses staff accounts", async () => {
         const registerResponse = await app.inject({
             method: "POST",
             url: "/auth/register",
-            payload: { name: `Delete Staff ${uniqueSuffix}`, email, password },
+            payload: { acceptedTermsVersion: "2026-11-15", name: `Delete Staff ${uniqueSuffix}`, email, password },
         });
 
         assert.equal(registerResponse.statusCode, 201);

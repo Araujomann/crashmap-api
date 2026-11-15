@@ -55,6 +55,8 @@ export async function registerUser(
             name: input.name.trim(),
             email: normalizedEmail,
             password_hash: hashPassword(input.password),
+            terms_version: input.acceptedTermsVersion,
+            terms_accepted_at: new Date(),
         },
     });
 

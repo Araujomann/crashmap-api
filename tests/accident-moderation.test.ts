@@ -20,7 +20,7 @@ test("moderation keeps app reports private until approved and audits decisions",
         const registerResponse = await app.inject({
             method: "POST",
             url: "/auth/register",
-            payload: { name: `Moderator ${uniqueSuffix}`, email, password },
+            payload: { acceptedTermsVersion: "2026-11-15", name: `Moderator ${uniqueSuffix}`, email, password },
         });
 
         assert.equal(registerResponse.statusCode, 201);

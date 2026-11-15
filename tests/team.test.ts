@@ -41,7 +41,7 @@ test("moderator invites, team management and staff audit", async () => {
         const response = await app.inject({
             method: "POST",
             url: "/auth/register",
-            payload: { name: `Team ${label}`, email, password },
+            payload: { acceptedTermsVersion: "2026-11-15", name: `Team ${label}`, email, password },
         });
         assert.equal(response.statusCode, 201, response.body);
         const { user, tokens } = response.json().data;

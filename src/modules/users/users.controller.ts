@@ -16,10 +16,17 @@ import {
     updateMe,
 } from "./users.service.js";
 import type {
+    AcceptTermsBody,
     DeleteMeBody,
     MyReportsQuery,
     UpdateMeBody,
 } from "./users.types.js";
+import { RATE_LIMITS } from "../../shared/http/rate-limits.js";
+import {
+    acceptTermsBodySchema,
+    dataExportResponseSchema,
+} from "./privacy.schema.js";
+import { acceptTerms, exportMyData } from "./privacy.service.js";
 
 export const usersRoutes: FastifyPluginAsync = async (app) => {
     app.get<{ Querystring: MyReportsQuery }>(
@@ -142,6 +149,52 @@ export const usersRoutes: FastifyPluginAsync = async (app) => {
             await deleteMe(request.authUser!.id, request.body ?? {});
 
             return reply.code(204).send();
+        },
+    );
+
+    app.post<{ Body: AcceptTermsBody }>(
+        "/me/terms-acceptance",
+        {
+            preHandler: requireAuthenticatedUser,
+            schema: {
+                tags: ["Users"],
+                summary:
+                    "Registrar o aceite dos Termos de Uso e da Política de Privacidade",
+                security: [{ bearerAuth: [] }],
+                body: acceptTermsBodySchema,
+                response: {
+                    200: meResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            const user = await acceptTerms(
+                request.authUser!.id,
+                request.body.version,
+            );
+
+            return reply.code(200).send({ data: user });
+        },
+    );
+
+    app.get(
+        "/me/data-export",
+        {
+            preHandler: requireAuthenticatedUser,
+            config: { rateLimit: RATE_LIMITS.dataExport },
+            schema: {
+                tags: ["Users"],
+                summary: "Exportar os dados pessoais do usuário corrente (LGPD)",
+                security: [{ bearerAuth: [] }],
+                response: {
+                    200: dataExportResponseSchema,
+                },
+            },
+        },
+        async (request, reply) => {
+            const data = await exportMyData(request.authUser!.id);
+
+            return reply.code(200).send({ data });
         },
     );
 };

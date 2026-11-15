@@ -93,6 +93,10 @@ model User {
   suspended_at DateTime?
   suspended_reason String?
   suspended_by_id String?
+  // Aceite dos Termos de Uso e da Política de Privacidade (LGPD): versão
+  // aceita (data de publicação dos textos, "AAAA-MM-DD") e quando.
+  terms_version String?
+  terms_accepted_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

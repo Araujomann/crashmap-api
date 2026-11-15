@@ -20,6 +20,9 @@ export interface AuthUser {
     permissions: Permission[];
     is_email_verified: boolean;
     email_verified_at: Date | null;
+    /** Versão dos Termos/Política aceita (AAAA-MM-DD); `null` se nunca aceitou. */
+    terms_version: string | null;
+    terms_accepted_at: Date | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -28,6 +31,8 @@ export interface RegisterBody {
     name: string;
     email: string;
     password: string;
+    /** Versão dos Termos de Uso e da Política de Privacidade exibida e aceita. */
+    acceptedTermsVersion: string;
 }
 
 export interface LoginBody {

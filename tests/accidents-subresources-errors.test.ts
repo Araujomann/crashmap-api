@@ -60,6 +60,7 @@ test("accident comments reject missing auth and unknown accidents", async () => 
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Comment Errors User ${uniqueSuffix}`,
                 email,
                 password,
@@ -125,6 +126,7 @@ test("accident comments and images reject other-user deletes", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Subresource Owner ${uniqueSuffix}`,
                 email: ownerEmail,
                 password,
@@ -140,6 +142,7 @@ test("accident comments and images reject other-user deletes", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Subresource Intruder ${uniqueSuffix}`,
                 email: intruderEmail,
                 password,

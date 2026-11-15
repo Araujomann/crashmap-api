@@ -21,6 +21,7 @@ test("auth flow supports register, login, refresh, and logout", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name,
                 email,
                 password,
@@ -111,6 +112,7 @@ test("password reset updates the password and invalidates its token and sessions
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Password Reset ${uniqueSuffix}`,
                 email,
                 password: oldPassword,
@@ -212,6 +214,7 @@ test("password reset codes stop working after five failed attempts", async () =>
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name: `Password Reset Limit ${uniqueSuffix}`,
                 email,
                 password: "OldTest123!",
@@ -273,6 +276,7 @@ test("users me flow returns and updates the current profile", async () => {
             method: "POST",
             url: "/auth/register",
             payload: {
+                acceptedTermsVersion: "2026-11-15",
                 name,
                 email,
                 password,
@@ -346,7 +350,7 @@ test("gamification counts only the authenticated user's approved app reports", a
             const response = await app.inject({
                 method: "POST",
                 url: "/auth/register",
-                payload: { name, email, password },
+                payload: { acceptedTermsVersion: "2026-11-15", name, email, password },
             });
 
             assert.equal(response.statusCode, 201);

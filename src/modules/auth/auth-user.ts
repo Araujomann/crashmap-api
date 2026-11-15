@@ -16,6 +16,8 @@ export function toAuthUser(user: {
     role: UserRole;
     is_email_verified: boolean;
     email_verified_at: Date | null;
+    terms_version: string | null;
+    terms_accepted_at: Date | null;
     created_at: Date;
     updated_at: Date;
 }): AuthUser {
@@ -27,6 +29,8 @@ export function toAuthUser(user: {
         permissions: permissionsFor(user.role),
         is_email_verified: user.is_email_verified,
         email_verified_at: user.email_verified_at,
+        terms_version: user.terms_version,
+        terms_accepted_at: user.terms_accepted_at,
         created_at: user.created_at,
         updated_at: user.updated_at,
     };
