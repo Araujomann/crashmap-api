@@ -25,9 +25,9 @@ export async function ensurePublicAccidentExists(accidentId: string) {
     }
 }
 
-// Staff pode editar/apagar conteúdo de terceiros (decisão registrada em
-// farol-admin/docs/arquitetura-permissoes.md §11). Cada ação de staff sobre
-// conteúdo alheio vai para a AdminAuditLog.
+// Staff pode editar/apagar conteúdo de terceiros (decisão nº 3 em
+// farol-admin/docs/architecture.md, "Decisões de autorização"). Cada ação de
+// staff sobre conteúdo alheio vai para a AdminAuditLog.
 export function canManageContent(user: AuthUser, ownerId: string | null) {
     return ownerId === user.id || can(user, "reports:moderate");
 }
