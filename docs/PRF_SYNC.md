@@ -203,7 +203,7 @@ clientes exibem:
 | `condicao_meteorologica` | contém "chuva" → `chuva`; "nublado" → `nublado`; "garoa"/"chuvisco" → `garoa`; demais → `ceu_claro` |
 | `description` | `Causa: … \| N morto(s) e N veiculo(s) envolvido(s) \| BR-… Km … (MUNICIPIO - UF)` |
 | `latitude` / `longitude` | vírgula decimal convertida |
-| `occurred_at` | data + hora da PRF gravadas como UTC (seção 10) |
+| `occurred_at` | data + hora da PRF (horário de Brasília) convertidas para o instante UTC real (seção 10) |
 | `source`, `moderation_status` | `PRF`, `APPROVED` (só na criação) |
 
 ---
@@ -413,10 +413,16 @@ falhavam por falta de banco e de secrets.
 2. **Google Drive:** arquivos grandes podem exigir uma página de confirmação.
    Ela é detectada e tratada como falha, não contornada. Os arquivos atuais
    (cerca de 3–4 MB) baixam diretamente.
-3. **Fuso horário (decisão D4):** data e hora da PRF são horário local e são
-   gravadas como UTC, como o importador anterior já fazia. A correção mudaria
-   todos os registros e o que os clientes exibem, por isso ficou fora do
-   escopo.
+3. **Fuso horário (decisão D4, revista em 15/11/2026):** data e hora da PRF
+   são horário local de Brasília (`America/Sao_Paulo`) e são convertidas para
+   o instante UTC real (15/01 06:40 → `09:40Z`), inclusive nos anos com
+   horário de verão. Antes, o horário local era gravado como se fosse UTC, o
+   que deslocava em 3h o que o Farol e o Farol Admin exibem (ambos convertem
+   para o fuso local) e desalinhava os registros PRF dos relatos do app, que
+   já chegam em UTC real. O `year_mismatch` compara o ano no fuso de Brasília,
+   para que uma ocorrência de 31/12 às 23h continue no arquivo do seu ano. Os
+   registros já gravados são corrigidos com `--force`, que atualiza só o
+   `occurred_at`.
 4. **Clima:** "Sol", "Nevoeiro/Neblina", "Vento", "Granizo", "Neve" e
    "Ignorado" viram `ceu_claro`, conforme a regra herdada e os quatro valores
    do enum atual.
@@ -442,7 +448,5 @@ falhavam por falta de banco e de secrets.
 - Endpoint ou tela no Farol Admin com o histórico de sincronizações.
 - Política de retenção para `prf_import_runs` e `prf_import_files`.
 - Notificação (e-mail ou push) quando uma sincronização falhar.
-- Converter `occurred_at` para UTC real, com migração de dados e ajuste
-  coordenado nos clientes.
 - Ampliar o enum de condição meteorológica para cobrir todos os valores da PRF.
 - Banco isolado para a suíte de testes.

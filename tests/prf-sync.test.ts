@@ -7,7 +7,7 @@ import {
     listAccidentsForModeration,
 } from "../src/modules/accidents/accident-moderation.service.js";
 import { parseYearList } from "../src/modules/prf-sync/prf-sync.cli.js";
-import { mapPrfRow } from "../src/modules/prf-sync/prf-mapper.js";
+import { mapPrfRow, parseDateAndHour } from "../src/modules/prf-sync/prf-mapper.js";
 import { parsePrfCatalog, toDownloadUrl } from "../src/modules/prf-sync/prf-source.js";
 import {
     PrfSyncLockedError,
@@ -246,7 +246,8 @@ test("mapper keeps the existing transformation rules and filters Imperatriz-MA e
     assert.equal(result.record.data.classificacao_acidente, "com_vitima");
     assert.equal(result.record.data.condicao_meteorologica, "garoa");
     assert.equal(result.record.data.latitude, -5.201382);
-    assert.equal(result.record.data.occurred_at.toISOString(), `${YEAR}-01-15T06:40:00.000Z`);
+    // 06:40 em Brasília (UTC−3) é 09:40 UTC.
+    assert.equal(result.record.data.occurred_at.toISOString(), `${YEAR}-01-15T09:40:00.000Z`);
     assert.equal(
         result.record.data.description,
         "Causa: Ultrapassagem Indevida | 0 morto(s) e 4 veiculo(s) envolvido(s) | BR-10 Km 289,6 (IMPERATRIZ - MA)",
@@ -258,6 +259,32 @@ test("mapper keeps the existing transformation rules and filters Imperatriz-MA e
 });
 
 // ---------------------------------------------------------- 1. inserção
+
+test("PRF date and time are Brasília local time and are stored as the real instant", () => {
+    const iso = (date: string, time: string) => parseDateAndHour(date, time)?.toISOString();
+
+    assert.equal(iso("15/01/2026", "06:40:00"), "2026-01-15T09:40:00.000Z");
+    // Madrugada: em UTC já é o dia seguinte, mas continua sendo a ocorrência do dia 31.
+    assert.equal(iso("31/12/2025", "23:30:00"), "2026-01-01T02:30:00.000Z");
+    // Antes de 2019 havia horário de verão (UTC−2).
+    assert.equal(iso("15/01/2018", "06:40:00"), "2018-01-15T08:40:00.000Z");
+    assert.equal(parseDateAndHour("31/02/2026", "10:00:00"), null);
+    assert.equal(parseDateAndHour("15/01/2026", "24:00:00"), null);
+});
+
+test("a late-night occurrence on 31/12 belongs to its file's year", () => {
+    const row = {
+        id: "9",
+        data_inversa: `31/12/${YEAR}`,
+        horario: "23:30:00",
+        uf: "MA",
+        municipio: "IMPERATRIZ",
+        latitude: "-5,2",
+        longitude: "-47,5",
+    } as Parameters<typeof mapPrfRow>[0];
+
+    assert.equal(mapPrfRow(row, YEAR).kind, "accepted");
+});
 
 test("imports new Imperatriz-MA occurrences, decoded from Windows-1252, outside moderation", async () => {
     const fake = new FakePrf();
