@@ -8,7 +8,7 @@ export function isUserRole(value: string): value is UserRole {
     return userRoles.includes(value as UserRole);
 }
 
-/** Visão pública da conta, com as permissões derivadas do papel. */
+
 export function toAuthUser(user: {
     id: string;
     name: string;
@@ -36,7 +36,7 @@ export function toAuthUser(user: {
     };
 }
 
-/** Conta suspensa por um administrador não autentica nem renova sessão. */
+
 export function ensureNotSuspended(user: { suspended_at: Date | null }) {
     if (user.suspended_at) {
         throw new AuthError(

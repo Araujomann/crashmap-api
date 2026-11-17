@@ -36,12 +36,12 @@ const actorSelect = {
     deleted_at: true,
 } as const;
 
-/** Decisões de moderação de todos os relatos, mais recentes primeiro. */
+
 export async function listModerationHistory(
     query: ModerationHistoryQuery = {},
 ): Promise<ModerationHistoryResult> {
     const pagination = resolvePagination(query, 20);
-    // `to` é inclusivo: vai até o fim daquele dia.
+    
     const createdAt = dayRangeFilter(
         resolveUtcDayRange(
             query,
@@ -88,7 +88,7 @@ export async function listModerationHistory(
     };
 }
 
-/** Quem já registrou ao menos uma decisão, para filtros e resumo por pessoa. */
+
 export async function listModerationHistoryModerators(): Promise<
     ModerationHistoryModerator[]
 > {

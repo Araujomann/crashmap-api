@@ -7,7 +7,7 @@ declare module "fastify" {
     }
 
     interface FastifyContextConfig {
-        /** Obrigatório em toda rota registrada dentro de `adminPlugin`. */
+        
         permission?: Permission;
     }
 }

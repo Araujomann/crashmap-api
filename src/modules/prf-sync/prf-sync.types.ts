@@ -1,6 +1,6 @@
 import type { Prisma } from "../../../generated/prisma/client.js";
 
-/** Linha do CSV "Agrupados por ocorrência" (cabeçalhos normalizados). */
+
 export interface PrfCsvRow {
     id?: string;
     data_inversa?: string;
@@ -28,7 +28,7 @@ export type PrfRejectionReason =
     | "year_mismatch"
     | "duplicated_id";
 
-/** Campos oficiais que a sincronização cria e mantém atualizados. */
+
 export interface PrfAccidentData {
     tipo_acidente: string;
     classificacao_acidente: "com_vitima" | "sem_vitima";

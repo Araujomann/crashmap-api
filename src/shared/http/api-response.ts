@@ -16,7 +16,7 @@ export const apiErrorSchema = {
     },
 } as const;
 
-/** Bloco `pagination` das listagens paginadas. */
+
 export const paginationMetaSchema = {
     type: "object",
     additionalProperties: false,
@@ -42,10 +42,10 @@ export function buildDataResponseSchema<TSchema extends object>(
     } as const;
 }
 
-/** Rotas que exigem o access token no cabeçalho `Authorization: Bearer`. */
+
 export const bearerAuthSecurity = [{ bearerAuth: [] }];
 
-/** Parâmetro de rota `:id` no formato UUID. */
+
 export const uuidIdParamsSchema = {
     type: "object",
     additionalProperties: false,
@@ -53,7 +53,7 @@ export const uuidIdParamsSchema = {
     properties: { id: { type: "string", format: "uuid" } },
 } as const;
 
-/** Referência opcional a uma pessoa (quem suspendeu, quem alterou etc.). */
+
 export const personRefOrNullSchema = {
     type: ["object", "null"],
     additionalProperties: false,

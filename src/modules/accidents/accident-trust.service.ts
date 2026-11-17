@@ -30,7 +30,7 @@ export async function getAccidentTrust(
     return { trusted_count: trustedCount, trusted_by_me: Boolean(vote) };
 }
 
-/** Só relatos aprovados de outra pessoa podem receber o voto. */
+
 async function ensureCanTrustAccident(accidentId: string, userId: string) {
     const accident = await prisma.accident.findFirst({
         where: { id: accidentId, moderation_status: "APPROVED" },

@@ -13,7 +13,7 @@ const healthDataSchema = {
     },
 } as const;
 
-/** `GET /health`: 200 com o banco no ar, 503 (degradado) sem ele. */
+
 export function registerHealthRoute(app: FastifyInstance) {
     app.get(
         "/health",

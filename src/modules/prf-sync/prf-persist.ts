@@ -1,7 +1,7 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import type { PrfAccidentData, PrfMappedRecord } from "./prf-sync.types.js";
 
-/** Campos oficiais comparados e atualizados. Moderação e relações ficam de fora. */
+
 export const PRF_MANAGED_FIELDS = [
     "tipo_acidente",
     "classificacao_acidente",
@@ -32,7 +32,7 @@ function sameValue(left: unknown, right: unknown) {
     return left === right;
 }
 
-/** Campos que mudaram entre o registro gravado e o dado oficial. */
+
 export function diffManagedFields(
     current: Pick<PrfAccidentData, ManagedField>,
     next: PrfAccidentData,
@@ -62,17 +62,17 @@ function chunk<T>(items: T[], size: number): T[][] {
     return chunks;
 }
 
-/**
- * Grava os registros de um arquivo numa única transação: ou o arquivo
- * inteiro é aplicado, ou nada muda. Registros iguais ao oficial não são
- * tocados (o `updated_at` só avança quando algo mudou de fato), então
- * reexecutar sobre a mesma publicação não produz nenhuma escrita.
- *
- * Em registros existentes só os campos oficiais são atualizados; status de
- * moderação, autoria, comentários, imagens e votos são preservados. Quando o
- * dado oficial sobrescreve uma edição feita por staff (política D1), o id do
- * registro é devolvido para o log da execução.
- */
+
+
+
+
+
+
+
+
+
+
+
 export async function persistPrfRecords(
     db: PrismaClient,
     records: PrfMappedRecord[],
@@ -179,7 +179,7 @@ export async function persistPrfRecords(
     return result;
 }
 
-/** Chaves já importadas de um ano que não aparecem na publicação atual. */
+
 export async function findMissingFromSource(
     db: PrismaClient,
     sourceYear: number,

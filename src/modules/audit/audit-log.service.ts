@@ -15,9 +15,9 @@ export interface AuditLogQuery {
     action?: AuditAction;
     targetType?: string;
     targetId?: string;
-    /** YYYY-MM-DD, inclusivo, UTC. */
+    
     from?: string;
-    /** YYYY-MM-DD, inclusivo, UTC. */
+    
     to?: string;
     page?: number;
     limit?: number;

@@ -651,12 +651,12 @@ export const accidentImageResponseSchema = {
     },
 } as const;
 
-/**
- * Filtros da listagem de `GET /accidents`. Converte os números da query
- * (página, limites do mapa) antes de chegarem ao banco. `page` e `limit` são
- * ajustados pelo service (mínimo 1, `limit` no máximo 50), por isso não têm
- * limites aqui.
- */
+
+
+
+
+
+
 export const accidentsListQuerySchema = {
     type: "object",
     additionalProperties: false,

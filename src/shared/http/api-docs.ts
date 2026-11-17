@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 
-/** Documento OpenAPI da API e a interface do Swagger em `/docs`. */
+
 export async function registerApiDocs(app: FastifyInstance) {
     await app.register(fastifySwagger, {
         openapi: {

@@ -2,7 +2,7 @@ import { Transform, type Readable } from "node:stream";
 import csvParser from "csv-parser";
 import type { PrfCsvRow } from "./prf-sync.types.js";
 
-/** Colunas sem as quais o arquivo não é aceito. */
+
 export const PRF_REQUIRED_COLUMNS = [
     "id",
     "data_inversa",
@@ -28,11 +28,11 @@ export class PrfFormatError extends Error {
     }
 }
 
-/**
- * Os CSVs da PRF são publicados em ISO-8859-1/Windows-1252. Por ser uma
- * codificação de um byte por caractere, cada pedaço pode ser convertido
- * isoladamente sem quebrar caracteres.
- */
+
+
+
+
+
 function windows1252ToUtf8(): Transform {
     const decoder = new TextDecoder("windows-1252");
     return new Transform({
@@ -58,10 +58,10 @@ export function validatePrfHeaders(headers: string[]): void {
     }
 }
 
-/**
- * Lê o CSV (separador ";", campos entre aspas) e entrega as linhas com
- * cabeçalhos normalizados. O cabeçalho é validado antes da primeira linha.
- */
+
+
+
+
 export async function* readPrfCsv(input: Readable): AsyncGenerator<PrfCsvRow> {
     let headersChecked = false;
     const parser = input.pipe(windows1252ToUtf8()).pipe(

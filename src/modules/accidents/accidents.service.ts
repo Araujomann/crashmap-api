@@ -178,11 +178,11 @@ export async function listAccidentsForMap(
     return { data, total: data.length };
 }
 
-/**
- * Lightweight fingerprint of the approved accidents shown on the map.
- * Clients compare it with the version they cached to decide whether
- * the map payload needs to be downloaded again.
- */
+
+
+
+
+
 export async function getAccidentsMapVersion(): Promise<AccidentMapVersion> {
     const result = await prisma.accident.aggregate({
         where: { moderation_status: "APPROVED" },
@@ -200,12 +200,12 @@ export async function getAccidentsMapVersion(): Promise<AccidentMapVersion> {
     };
 }
 
-/**
- * Resumo público dos acidentes aprovados. `scope` restringe o universo
- * (a rota pública não usa; os testes usam para medir só os próprios
- * registros, sem depender de outros testes que rodam em paralelo no mesmo
- * banco).
- */
+
+
+
+
+
+
 export async function getAccidentOverview(
     now = new Date(),
     scope: Prisma.AccidentWhereInput = {},
@@ -352,7 +352,7 @@ export async function createAccident(
     return toAccident(accident);
 }
 
-/** Campos do relato comparados na auditoria de edição feita por staff. */
+
 const AUDITED_ACCIDENT_FIELDS = [
     "tipo_acidente",
     "classificacao_acidente",
@@ -370,7 +370,7 @@ function auditValue(value: unknown): string | number | null {
     return null;
 }
 
-/** Só os campos auditados que mudaram, com o valor antes e depois. */
+
 function auditedFieldChanges(previous: AccidentRecord, next: AccidentRecord) {
     const before: Record<string, string | number | null> = {};
     const after: Record<string, string | number | null> = {};
@@ -424,10 +424,10 @@ export async function updateAccident(
         );
     }
 
-    // O autor só edita enquanto o relato aguarda moderação: depois da decisão,
-    // uma edição mudaria o conteúdo público sem nova revisão. A staff continua
-    // podendo corrigir relatos moderados (a edição é auditada abaixo).
-    // Permissão antes do status, como na exclusão.
+    
+    
+    
+    
     const authorEditOnly = !can(user, "reports:moderate");
 
     if (authorEditOnly && currentAccident.moderation_status !== "PENDING") {
@@ -435,8 +435,8 @@ export async function updateAccident(
     }
 
     const accident = await prisma.$transaction(async (transaction) => {
-        // Condição no próprio UPDATE: se a moderação decidir entre a leitura
-        // acima e esta escrita, a edição do autor é recusada.
+        
+        
         const changed = await transaction.accident.updateMany({
             where: {
                 id: accidentId,
@@ -480,9 +480,9 @@ export async function updateAccident(
             },
         };
 
-        // Relato já moderado só é editável pela staff, inclusive quando ela é
-        // a autora: essa edição muda conteúdo revisado e sempre vai para a
-        // auditoria. O status é o do momento da escrita (`updated`).
+        
+        
+        
         if (updated.moderation_status !== "PENDING") {
             await recordAudit(
                 transaction,
@@ -518,8 +518,8 @@ export async function deleteAccident(
         throw accidentNotFoundError();
     }
 
-    // Permissão antes do status: quem não pode apagar o relato recebe 403,
-    // sem descobrir se ele já foi moderado.
+    
+    
     if (!canManageContent(user, currentAccident.created_by_id)) {
         throw new AppError(
             "You cannot delete this accident",

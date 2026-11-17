@@ -21,11 +21,11 @@ export interface GrantRoleResult {
     revokedSessions: number;
 }
 
-/**
- * Altera o papel de uma conta fora da API (uso operacional: criar o primeiro
- * admin, corrigir um papel). Toda alteração vai para a auditoria sem ator
- * (`actor_id = null`) e com o operador local em `metadata.operator`.
- */
+
+
+
+
+
 export async function grantRole(
     rawEmail: string,
     rawRole: string,
@@ -81,7 +81,7 @@ export async function grantRole(
             data: { role: newRole },
         });
 
-        // Quem perde poder sai de todas as sessões.
+        
         const rank: Record<UserRole, number> = { user: 0, moderator: 1, admin: 2 };
         let revokedSessions = 0;
         if (rank[newRole] < rank[user.role]) {

@@ -1,6 +1,6 @@
 import { PERMISSIONS } from "./permissions.js";
 
-/** Versão dos Termos/Política: data de publicação dos textos (AAAA-MM-DD). */
+
 export const termsVersionSchema = {
     type: "string",
     pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",

@@ -1,4 +1,4 @@
-/** Escapa os caracteres especiais de HTML para inserir texto em templates. */
+
 export function escapeHtml(value: string) {
     return value
         .split("&").join("&amp;")

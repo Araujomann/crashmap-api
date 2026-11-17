@@ -37,7 +37,7 @@ export const requireAuthenticatedUser: preHandlerHookHandler = async (
         where: { id: payload.sub },
     });
 
-    // Conta anonimizada: o access token ainda não expirado deixa de valer.
+    
     if (!user || user.deleted_at) {
         throw new AuthError(
             "Authenticated user not found",
@@ -46,7 +46,7 @@ export const requireAuthenticatedUser: preHandlerHookHandler = async (
         );
     }
 
-    // Suspensão vale na hora, inclusive para access tokens já emitidos.
+    
     ensureNotSuspended(user);
 
     request.authUser = toAuthUser(user);
@@ -70,10 +70,10 @@ export const requireVerifiedEmail: preHandlerHookHandler = async (request) => {
     }
 };
 
-/**
- * Exige todas as permissões informadas. Usa o papel relido do banco em
- * `requireAuthenticatedUser`, nunca o papel gravado no JWT.
- */
+
+
+
+
 export function requirePermission(
     ...requiredPermissions: Permission[]
 ): preHandlerHookHandler {
@@ -98,7 +98,7 @@ export function requirePermission(
     };
 }
 
-/** Cadeia padrão das rotas do painel administrativo. */
+
 export function staff(
     ...requiredPermissions: Permission[]
 ): preHandlerHookHandler[] {

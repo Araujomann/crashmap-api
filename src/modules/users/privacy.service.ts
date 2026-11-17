@@ -3,12 +3,12 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { toAuthUser } from "../auth/auth-user.js";
 import type { AuthUser } from "../auth/auth.types.js";
 
-/**
- * Registra o aceite de uma versão dos Termos de Uso e da Política de
- * Privacidade. A versão é a data de publicação dos textos exibidos pelo
- * aplicativo; guardamos qual versão foi aceita e quando (LGPD art. 8º, §2º:
- * o controlador deve poder provar o consentimento).
- */
+
+
+
+
+
+
 export async function acceptTerms(
     userId: string,
     version: string,
@@ -21,7 +21,7 @@ export async function acceptTerms(
     return toAuthUser(user);
 }
 
-/** Cópia dos dados pessoais da conta (LGPD art. 18, II e V). */
+
 export async function exportMyData(userId: string) {
     const now = new Date();
     const user = await prisma.user.findUnique({

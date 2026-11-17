@@ -45,7 +45,7 @@ function verifyHmacSignature(
     return timingSafeEqual(expectedSignature, receivedSignature);
 }
 
-/** Converte durações como `15m`, `30d` em segundos. */
+
 export function parseDurationToSeconds(duration: string): number {
     const match = /^([1-9]\d*)([smhd])$/.exec(duration);
 
@@ -69,7 +69,7 @@ export function parseDurationToSeconds(duration: string): number {
     return amount * multipliers[unit as keyof typeof multipliers];
 }
 
-/** JWT HS256 assinado com `ACCESS_TOKEN_SECRET`. */
+
 export function signAccessToken(payload: TokenPayload): string {
     const header = base64UrlJson({ alg: "HS256", typ: "JWT" });
     const issuedAt = Math.floor(Date.now() / 1000);
@@ -144,12 +144,12 @@ export function generateRefreshToken() {
     return randomBytes(48).toString("hex");
 }
 
-/** O refresh token só é guardado como HMAC. */
+
 export function hashRefreshToken(refreshToken: string) {
     return hmacSha256Hex(env.REFRESH_TOKEN_SECRET, refreshToken);
 }
 
-/** Par de tokens de uma nova sessão. */
+
 export function buildTokens(user: {
     id: string;
     email: string;

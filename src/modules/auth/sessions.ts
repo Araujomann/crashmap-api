@@ -5,7 +5,7 @@ import { hashRefreshToken, parseDurationToSeconds } from "./tokens.js";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-/** Dados de um refresh token novo, válido por `REFRESH_TOKEN_EXPIRES_IN`. */
+
 export function refreshTokenData(userId: string, refreshToken: string) {
     return {
         user_id: userId,
@@ -23,10 +23,10 @@ export async function storeRefreshToken(userId: string, refreshToken: string) {
     });
 }
 
-/**
- * Encerra todas as sessões ativas da conta (revoga os refresh tokens).
- * Retorna quantas foram encerradas.
- */
+
+
+
+
 export async function revokeAllSessions(
     db: Db,
     userId: string,

@@ -3,8 +3,8 @@ import { userInfo } from "node:os";
 import { prisma } from "../database/prisma.js";
 import { GrantRoleError, grantRole } from "../../modules/users/grant-role.js";
 
-// Uso: pnpm admin:grant-role <email> <user|moderator|admin>
-// Ex.:  pnpm admin:grant-role ana@exemplo.com admin
+
+
 async function main() {
     const [email, role] = process.argv.slice(2);
     if (!email || !role) {
@@ -17,7 +17,7 @@ async function main() {
     try {
         operator = userInfo().username;
     } catch {
-        // Ambiente sem usuário local (contêiner); mantém "desconhecido".
+        
     }
 
     try {

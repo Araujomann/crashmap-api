@@ -13,8 +13,8 @@ export const deleteMeBodySchema = {
     type: "object",
     additionalProperties: false,
     properties: {
-        // Obrigatória para contas com senha (reautenticação). Contas criadas
-        // apenas via Google não possuem senha local.
+        
+        
         password: { type: "string", minLength: 1, maxLength: 256 },
     },
 } as const;

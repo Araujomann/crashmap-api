@@ -9,23 +9,23 @@ import { escapeHtml } from "../../shared/utils/html.js";
 export interface ModeratorInviteMessage {
     to: string;
     inviteUrl: string;
-    /** O mesmo token do link, para colar na página /invite do painel. */
+    
     inviteCode: string;
     inviterName: string;
     expiresAt: Date;
 }
 
-/** Link do convite. O token vai no fragmento (#), que não chega a servidores nem ao Referer. */
+
 export function buildInviteUrl(token: string) {
     return `${env.ADMIN_PANEL_URL}/invite#token=${encodeURIComponent(token)}`;
 }
 
-/**
- * O botão com link só entra quando o painel tem endereço público com HTTPS.
- * Link para localhost / rede local é tratado como phishing pelos provedores
- * (testado: o mesmo e-mail com o link foi barrado e sem o link chegou), então
- * nesses casos o e-mail leva só o código para colar em /invite.
- */
+
+
+
+
+
+
 export function isPublicPanelUrl(panelUrl = env.ADMIN_PANEL_URL) {
     try {
         const { protocol, hostname } = new URL(panelUrl);
@@ -112,7 +112,7 @@ export function buildModeratorInviteEmail(
     };
 }
 
-/** Envia o convite. Retorna `false` quando o e-mail não saiu. */
+
 export type ModeratorInviteMailer = (
     message: ModeratorInviteMessage,
     logger: FastifyBaseLogger,
@@ -135,9 +135,9 @@ const smtpMailer: ModeratorInviteMailer = async (message, logger) => {
     try {
         const info = await sendMail(message.to, content);
         const rejected = info.rejected.length > 0;
-        // Resposta do servidor SMTP: "250 ... OK" quer dizer que o Gmail
-        // aceitou a mensagem; se ela não chegar, o problema é na entrega
-        // (spam, filtro), não na API.
+        
+        
+        
         logger[rejected ? "warn" : "info"](
             {
                 provider: info.provider,
@@ -166,10 +166,10 @@ export function sendModeratorInviteEmail(
     return currentMailer(message, logger);
 }
 
-/**
- * Troca o envio de e-mail (usado pelos testes para capturar o link sem
- * mandar e-mail de verdade). `null` volta para o SMTP.
- */
+
+
+
+
 export function setModeratorInviteMailer(mailer: ModeratorInviteMailer | null) {
     currentMailer = mailer ?? smtpMailer;
 }

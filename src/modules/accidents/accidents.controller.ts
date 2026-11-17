@@ -44,11 +44,11 @@ import type {
     UpdateAccidentBody,
 } from "./accidents.types.js";
 
-/**
- * Rotas de `/accidents`. Cada grupo fica no controller do seu assunto; a
- * ordem de registro abaixo é a ordem em que as rotas aparecem na tabela de
- * rotas e na documentação, por isso é mantida.
- */
+
+
+
+
+
 export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     registerOverviewRoute(app);
     registerModerationQueueRoutes(app);
@@ -60,7 +60,7 @@ export const accidentsRoutes: FastifyPluginAsync = async (app) => {
     registerModerationDecisionRoute(app);
 };
 
-/** Estatísticas públicas. */
+
 function registerOverviewRoute(app: FastifyInstance) {
     app.get(
         "/overview",
@@ -79,7 +79,7 @@ function registerOverviewRoute(app: FastifyInstance) {
     );
 }
 
-/** Listagem (staff), mapa e detalhe público de um relato. */
+
 function registerReadRoutes(app: FastifyInstance) {
     app.get<{
         Querystring: AccidentListQuery;
@@ -163,7 +163,7 @@ function registerReadRoutes(app: FastifyInstance) {
     );
 }
 
-/** Criação, edição e exclusão do relato pelo autor (ou por staff). */
+
 function registerWriteRoutes(app: FastifyInstance) {
     app.post<{ Body: CreateAccidentBody }>(
         "/",

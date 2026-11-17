@@ -1,12 +1,12 @@
-/**
- * Importa arquivos da PRF já baixados (CSV ou ZIP), sem acessar a internet.
- *
- *   pnpm import:prf ./datatran2026.zip
- *   pnpm import:prf ./acidentes.csv --year=2026
- *   pnpm import:prf ./datatran2026.csv --dry-run
- *
- * Usa as mesmas regras, validações e registro de execução de `sync:prf`.
- */
+
+
+
+
+
+
+
+
+
 import "dotenv/config.js";
 import fs from "node:fs";
 import { basename, resolve } from "node:path";

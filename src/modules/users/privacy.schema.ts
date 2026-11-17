@@ -1,6 +1,6 @@
 import { termsVersionSchema } from "../auth/auth.schema.js";
 
-/** Aceite de uma versão dos Termos de Uso e da Política de Privacidade. */
+
 export const acceptTermsBodySchema = {
     type: "object",
     additionalProperties: false,
@@ -23,11 +23,11 @@ function objectSchema<T extends Record<string, unknown>>(properties: T) {
     } as const;
 }
 
-/**
- * Cópia dos dados pessoais da conta (LGPD art. 18, II e V). Fica de fora o
- * que não é dado do titular ou que comprometeria a segurança: hash da senha,
- * tokens de sessão, códigos de verificação e o identificador de push.
- */
+
+
+
+
+
 export const dataExportResponseSchema = objectSchema({
     data: objectSchema({
         generated_at: dateTime,

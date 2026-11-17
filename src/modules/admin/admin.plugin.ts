@@ -9,12 +9,12 @@ import {
     moderatorsAdminRoutes,
 } from "../team/team.controller.js";
 
-/**
- * Agrupa as rotas administrativas sob `/admin`, negando por padrão: toda rota
- * registrada aqui dentro precisa declarar `config.permission`, senão a API nem
- * sobe. Os guards de `staff(permission)` são colocados antes de qualquer
- * `preHandler` da própria rota.
- */
+
+
+
+
+
+
 export const adminPlugin: FastifyPluginAsync = async (app) => {
     app.addHook("onRoute", (route) => {
         const permission = route.config?.permission;

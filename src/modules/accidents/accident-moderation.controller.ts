@@ -24,7 +24,7 @@ import type {
     ModerateAccidentBody,
 } from "./accidents.types.js";
 
-/** Fila de moderação do painel: resumo, listagem, detalhe e edição. */
+
 export function registerModerationQueueRoutes(app: FastifyInstance) {
     app.get(
         "/moderation/summary",
@@ -111,7 +111,7 @@ export function registerModerationQueueRoutes(app: FastifyInstance) {
     );
 }
 
-/** Decisão de moderação (aprovar ou rejeitar). */
+
 export function registerModerationDecisionRoute(app: FastifyInstance) {
     app.patch<{
         Params: { id: string };

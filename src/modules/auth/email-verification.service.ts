@@ -32,10 +32,10 @@ type VerificationCodeRecipient = {
     email: string;
 };
 
-/**
- * Gera um novo código de 6 dígitos (substituindo o anterior) e envia por e-mail.
- * Retorna `false` se o e-mail não pôde ser enviado.
- */
+
+
+
+
 export async function issueEmailVerificationCode(
     user: VerificationCodeRecipient,
     logger: FastifyBaseLogger,
@@ -185,7 +185,7 @@ export async function verifyEmailCode(
         );
     }
 
-    // Conta a tentativa antes de comparar (evita força bruta concorrente)
+    
     const attempted = await prisma.verificationToken.updateMany({
         where: {
             id: record.id,

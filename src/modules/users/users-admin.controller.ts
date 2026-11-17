@@ -23,7 +23,7 @@ import type { AdminUsersQuery } from "./users.types.js";
 
 type IdParams = { Params: { id: string } };
 
-// Registradas dentro de `adminPlugin` com prefixo /users — permissão users:manage.
+
 export const usersAdminRoutes: FastifyPluginAsync = async (app) => {
     app.get<{ Querystring: AdminUsersQuery }>(
         "/",

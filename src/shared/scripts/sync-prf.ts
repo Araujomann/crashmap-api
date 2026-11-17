@@ -1,15 +1,15 @@
-/**
- * Sincronização com os dados abertos da PRF (Imperatriz–MA).
- *
- *   pnpm sync:prf                      anos padrão (corrente + já importados)
- *   pnpm sync:prf --year=2025,2026     anos específicos (aceita 2022-2026)
- *   pnpm sync:prf --force              reprocessa mesmo sem mudança no arquivo
- *   pnpm sync:prf --dry-run            valida e compara, sem gravar ocorrências
- *   pnpm sync:prf --year=2026 --source-url=<link>   link fixo para um ano
- *
- * Variáveis opcionais: PRF_SYNC_YEARS, PRF_SOURCE_URL + PRF_SOURCE_YEAR,
- * PRF_CATALOG_URL e PRF_SYNC_TRIGGER ("schedule" no GitHub Actions).
- */
+
+
+
+
+
+
+
+
+
+
+
+
 import "dotenv/config.js";
 import { prisma } from "../database/prisma.js";
 import { parsePrfCliArguments, parseYearList } from "../../modules/prf-sync/prf-sync.cli.js";

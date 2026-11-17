@@ -19,7 +19,7 @@ export interface ModeratorInvite {
     accepted_at: Date | null;
     accepted_by: TeamPerson | null;
     revoked_at: Date | null;
-    /** `null` com `revoked_at` preenchido = revogado pelo sistema. */
+    
     revoked_by: TeamPerson | null;
 }
 
@@ -41,7 +41,7 @@ export interface TeamMember {
     role: Exclude<UserRole, "user">;
     decisions_count: number;
     created_at: Date;
-    /** Quando aceitou o convite mais recente (null para quem entrou por script). */
+    
     joined_at: Date | null;
 }
 

@@ -13,7 +13,7 @@ import {
     removeAccidentTrust,
 } from "./accident-trust.service.js";
 
-/** Votos de confiança da comunidade em um relato aprovado. */
+
 export function registerTrustRoutes(app: FastifyInstance) {
     app.get<{ Params: { id: string } }>(
         "/:id/trust",

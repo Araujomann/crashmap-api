@@ -20,7 +20,7 @@ import type {
     ModerationAccident,
 } from "./accidents.types.js";
 
-/** A moderação só trata relatos enviados pelo aplicativo. */
+
 const APP_SOURCE = { source: "APP" as const };
 
 const moderationAccidentInclude = {
@@ -223,7 +223,7 @@ export async function moderateAccident(
             );
         }
 
-        // Decisão atômica: em uma corrida entre moderadores, só um vence.
+        
         const updated = await transaction.accident.updateMany({
             where: { id: accidentId, moderation_status: "PENDING" },
             data: {
@@ -259,10 +259,10 @@ export async function moderateAccident(
     });
 }
 
-/**
- * Avisa os dispositivos sobre um relato aprovado. Uma falha no envio só é
- * registrada no log: a decisão de moderação já foi gravada e não é desfeita.
- */
+
+
+
+
 export async function notifyAccidentApproved(
     accidentId: string,
     logger: FastifyBaseLogger,

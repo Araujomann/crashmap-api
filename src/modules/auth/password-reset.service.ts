@@ -58,11 +58,11 @@ function isUniqueConstraintError(error: unknown) {
     );
 }
 
-/**
- * Grava o código novo para a conta, respeitando a janela de pedidos e o
- * intervalo mínimo entre eles. Retorna `false` quando o pedido deve ser
- * ignorado em silêncio (limite atingido ou corrida com outro pedido).
- */
+
+
+
+
+
 async function storePasswordResetCode(
     userId: string,
     codeHash: string,
@@ -163,7 +163,7 @@ export async function requestPasswordReset(
     try {
         await sendMail(user.email, buildPasswordResetEmail(user.name, code));
     } catch (error) {
-        // O código que não chegou ao usuário deixa de valer.
+        
         await prisma.passwordResetToken.updateMany({
             where: {
                 user_id: user.id,

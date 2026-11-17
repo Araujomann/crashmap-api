@@ -26,7 +26,7 @@ interface AccidentImageUploadRequest {
     };
 }
 
-/** Lê o arquivo e a legenda (`caption`) do corpo multipart. */
+
 async function readAccidentImageUpload(request: FastifyRequest) {
     let fileBuffer: Buffer | undefined;
     let caption: string | null = null;
@@ -45,7 +45,7 @@ async function readAccidentImageUpload(request: FastifyRequest) {
     return { fileBuffer, caption };
 }
 
-/** Imagens de um relato aprovado. */
+
 export function registerImageRoutes(app: FastifyInstance) {
     app.get<{ Params: { id: string } }>(
         "/:id/images",

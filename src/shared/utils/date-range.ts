@@ -2,7 +2,7 @@ import { AppError } from "../errors/app-error.js";
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** `YYYY-MM-DD` → meia-noite UTC daquele dia; `null` se a data for inválida. */
+
 export function parseUtcDay(value: string): Date | null {
     const date = new Date(`${value}T00:00:00.000Z`);
     return Number.isNaN(date.getTime()) ? null : date;
@@ -10,14 +10,14 @@ export function parseUtcDay(value: string): Date | null {
 
 export interface UtcDayRange {
     from?: Date;
-    /** Início do dia seguinte a `to`: o filtro inclui o dia `to` inteiro. */
+    
     toExclusive?: Date;
 }
 
-/**
- * Intervalo de dias em UTC, ambos inclusivos. Quem chama decide o erro de
- * uma data inválida; o intervalo invertido tem um erro único.
- */
+
+
+
+
 export function resolveUtcDayRange(
     range: { from?: string; to?: string },
     invalidDateError: (field: "from" | "to") => Error,
@@ -44,7 +44,7 @@ export function resolveUtcDayRange(
     return { from, toExclusive };
 }
 
-/** Filtro Prisma `{ gte, lt }` do intervalo, ou `undefined` se não houver. */
+
 export function dayRangeFilter({ from, toExclusive }: UtcDayRange) {
     if (!from && !toExclusive) return undefined;
 

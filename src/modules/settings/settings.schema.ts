@@ -36,7 +36,7 @@ export const settingsListResponseSchema = {
     },
 } as const;
 
-/** Cada chave conhecida, inteira e dentro dos limites da sua definição. */
+
 export const updateSettingsBodySchema = {
     type: "object",
     additionalProperties: false,

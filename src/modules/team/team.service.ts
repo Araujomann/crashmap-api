@@ -5,7 +5,7 @@ import { recordAudit, type AuditContext } from "../audit/audit.service.js";
 import { revokeAllSessions } from "../auth/sessions.js";
 import type { TeamMember } from "./team.types.js";
 
-/** Moderadores e administradores ativos. */
+
 export async function listTeam(): Promise<TeamMember[]> {
     const members = await prisma.user.findMany({
         where: { role: { in: ["moderator", "admin"] }, deleted_at: null },
@@ -36,10 +36,10 @@ export async function listTeam(): Promise<TeamMember[]> {
     }));
 }
 
-/**
- * Remove a permissão de moderador: volta a `user` e todas as sessões são
- * encerradas. Administradores não são rebaixados por aqui.
- */
+
+
+
+
 export async function revokeModerator(
     actor: AuthUser,
     targetId: string,

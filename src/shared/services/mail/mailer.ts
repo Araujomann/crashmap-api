@@ -7,7 +7,7 @@ export interface MailContent {
     html: string;
 }
 
-/** Resultado do envio, no mesmo formato para SMTP e para a API HTTP. */
+
 export interface MailResult {
     provider: MailProvider;
     messageId?: string;
@@ -28,10 +28,10 @@ interface MailSettings {
     SMTP_FROM: string;
 }
 
-/**
- * Com `BREVO_API_KEY` o envio usa a API HTTP do Brevo (porta 443); sem ela,
- * o SMTP do Gmail. O remetente é sempre `SMTP_FROM`.
- */
+
+
+
+
 export function resolveMailProvider(settings: MailSettings = env): MailProvider | null {
     if (!settings.SMTP_FROM) return null;
     if (settings.BREVO_API_KEY) return "brevo";
@@ -39,12 +39,12 @@ export function resolveMailProvider(settings: MailSettings = env): MailProvider 
     return null;
 }
 
-/** Algum meio de envio (API HTTP ou SMTP) está configurado. */
+
 export function isMailConfigured(): boolean {
     return resolveMailProvider() !== null;
 }
 
-/** Aceita `email@x.com` ou `Nome <email@x.com>`. */
+
 export function parseMailAddress(value: string): { email: string; name?: string } {
     const match = value.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
     if (match) {

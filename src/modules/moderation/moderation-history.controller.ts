@@ -86,7 +86,7 @@ const moderatorsResponseSchema = buildDataResponseSchema({
     },
 } as const);
 
-// Registradas dentro de `adminPlugin`: os guards vêm de `config.permission`.
+
 export const moderationHistoryRoutes: FastifyPluginAsync = async (app) => {
     app.get<{ Querystring: ModerationHistoryQuery }>(
         "/",

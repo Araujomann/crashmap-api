@@ -31,16 +31,16 @@ export type PrfFileStatus = "IMPORTED" | "UNCHANGED" | "NOT_PUBLISHED" | "FAILED
 
 export interface PrfSyncOptions {
     trigger: PrfSyncTrigger;
-    /** Anos a sincronizar. Padrão: ano corrente + anos já presentes na base. */
+    
     years?: number[];
-    /** Processa mesmo que o arquivo não tenha mudado. */
+    
     force?: boolean;
-    /** Lê, valida e compara, mas não grava ocorrências. */
+    
     dryRun?: boolean;
-    /** Link fixo para um ano (substitui o catálogo para aquele ano). */
+    
     sourceUrlOverride?: { year: number; url: string };
     catalogUrl?: string;
-    /** Modo arquivo local: importa estes arquivos (CSV ou ZIP), sem download. */
+    
     localFiles?: Array<{ path: string; year: number }>;
 }
 
@@ -50,7 +50,7 @@ export interface PrfSyncDeps {
     logger?: PrfSyncLogger;
     now?: () => Date;
     retry?: Partial<RetryOptions>;
-    /** Execuções RUNNING mais antigas que isto são consideradas abandonadas. */
+    
     staleAfterMs?: number;
 }
 
@@ -159,10 +159,10 @@ async function findPreviousImport(
     });
 }
 
-/**
- * Lê o CSV, filtra Imperatriz–MA, valida, transforma e grava. Toda a
- * validação de formato acontece antes de qualquer escrita.
- */
+
+
+
+
 async function importCsvFile(
     db: PrismaClient,
     csvPath: string,
@@ -230,7 +230,7 @@ async function importCsvFile(
     report.details.staff_edits_overwritten_ids = persisted.staffEditsOverwritten.slice(0, MAX_SAMPLES);
     report.details.changed_fields = persisted.changedFields;
 
-    // Política D2: registros que sumiram da publicação nunca são apagados.
+    
     const missing = await findMissingFromSource(db, sourceYear, seenKeys);
     report.missing_from_source = missing.length;
     report.details.missing_from_source_keys = missing.slice(0, MAX_SAMPLES);
@@ -249,7 +249,7 @@ function newFileReport(sourceYear: number, sourceUrl: string | null): PrfFileRep
     };
 }
 
-/** Executa a sincronização completa com trava, registro e contagens. */
+
 export async function runPrfSync(
     options: PrfSyncOptions,
     deps: PrfSyncDeps,
@@ -470,7 +470,7 @@ export async function runPrfSync(
     return { run_id: runId, status, dry_run: dryRun, files, error: summary };
 }
 
-/** Ano corrente mais todos os anos da PRF já presentes na base. */
+
 async function defaultYears(db: PrismaClient, today: Date): Promise<number[]> {
     const stored = await db.accident.findMany({
         where: { source: "PRF", source_year: { not: null } },

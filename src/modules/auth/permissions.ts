@@ -1,11 +1,11 @@
 import type { UserRole } from "./auth.types.js";
 
-/**
- * Fonte única das permissões da plataforma.
- *
- * Rotas e serviços checam permissões, nunca papéis. Para mudar o que um papel
- * pode fazer, altere apenas o mapa ROLE_PERMISSIONS abaixo.
- */
+
+
+
+
+
+
 export const PERMISSIONS = [
     "panel:access",
     "reports:read",

@@ -67,27 +67,27 @@ function readList(value: string | undefined) {
         .filter(Boolean);
 }
 
-/**
- * Origens de navegador autorizadas (CORS). O painel não entra aqui: ele fala
- * com a API pelo servidor (BFF), não pelo navegador. O app nativo também não
- * passa por CORS. Sobra o app rodando na web (Expo web), por isso o padrão
- * fora de produção é o FRONTEND_URL; em produção, só o que for listado.
- */
+
+
+
+
+
+
 function readCorsOrigins() {
     const configured = readList(process.env.CORS_ORIGINS);
     if (configured.length > 0) return configured;
     return nodeEnv === "production" ? [] : [frontendUrl.replace(/\/+$/, "")];
 }
 
-/**
- * De quem a API aceita o cabeçalho X-Forwarded-For (o IP real do cliente).
- * - vazio: em desenvolvimento confia só em loopback (o painel local); em
- *   produção não confia em ninguém;
- * - "true": confia em qualquer proxy (só atrás de um balanceador que
- *   sobrescreve o cabeçalho);
- * - número: quantidade de proxies à frente;
- * - lista de IPs/CIDRs separados por vírgula.
- */
+
+
+
+
+
+
+
+
+
 function readTrustProxy(): boolean | number | string[] {
     const value = process.env.TRUST_PROXY?.trim();
     if (!value) {
@@ -103,7 +103,7 @@ export const env = {
     NODE_ENV: nodeEnv,
     CORS_ORIGINS: readCorsOrigins(),
     TRUST_PROXY: readTrustProxy(),
-    // Válvula para depuração local; em produção, sempre ligado.
+    
     RATE_LIMIT_ENABLED: process.env.RATE_LIMIT_ENABLED !== "false",
     PORT: readPort(process.env.PORT),
     DATABASE_URL: readRequiredEnv("DATABASE_URL"),
@@ -112,7 +112,7 @@ export const env = {
     ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN ?? "15m",
     REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN ?? "30d",
     FRONTEND_URL: frontendUrl,
-    // Painel administrativo: base dos links de convite de moderador.
+    
     ADMIN_PANEL_URL: (
         process.env.ADMIN_PANEL_URL?.trim() || "http://localhost:3000"
     ).replace(/\/+$/, ""),
@@ -120,8 +120,8 @@ export const env = {
     SMTP_PASS: process.env.SMTP_PASS?.replace(/\s/g, "") ?? "",
     SMTP_FROM:
         process.env.SMTP_FROM?.trim() || process.env.SMTP_USER?.trim() || "",
-    // Envio por API HTTP (Brevo). Quando definido, substitui o SMTP; útil onde
-    // as portas SMTP de saída são bloqueadas (ex.: plano gratuito do Render).
+    
+    
     BREVO_API_KEY: process.env.BREVO_API_KEY?.trim() ?? "",
     CLOUDINARY_CLOUD_NAME: cloudinaryConfig.CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY: cloudinaryConfig.CLOUDINARY_API_KEY,

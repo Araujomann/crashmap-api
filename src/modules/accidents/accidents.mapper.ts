@@ -35,7 +35,7 @@ type ModerationAccidentRow = AccidentDetailRow & {
     }>;
 };
 
-/** Relato no formato público (sem a nota interna da moderação). */
+
 export function toAccident(accident: AccidentRecord): Accident {
     return {
         id: accident.id,

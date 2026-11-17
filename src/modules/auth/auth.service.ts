@@ -15,7 +15,7 @@ import type {
     RegisterBody,
 } from "./auth.types.js";
 
-// Mantido aqui por compatibilidade: os testes importam deste módulo.
+
 export { hashPasswordResetCode } from "./password-reset.service.js";
 
 function ensurePasswordUser(passwordHash: string | null): string {
@@ -60,7 +60,7 @@ export async function registerUser(
         },
     });
 
-    // Uma falha no envio não impede o cadastro: o usuário pode pedir reenvio.
+    
     await issueEmailVerificationCode(user, logger);
 
     const tokens = buildTokens(user);
@@ -87,7 +87,7 @@ export async function loginUser(input: LoginBody): Promise<AuthResponse> {
         throw invalidCredentialsError();
     }
 
-    // Só depois da senha: não revela a suspensão para quem não é o dono.
+    
     ensureNotSuspended(user);
 
     const tokens = buildTokens(user);
@@ -125,7 +125,7 @@ export async function refreshSession(
 
     const tokens = buildTokens(tokenRecord.user);
 
-    // Rotação: o token usado é revogado junto com a criação do novo.
+    
     await prisma.$transaction([
         prisma.refreshToken.update({
             where: { id: tokenRecord.id },

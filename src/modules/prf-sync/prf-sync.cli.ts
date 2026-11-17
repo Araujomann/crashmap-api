@@ -1,4 +1,4 @@
-/** Leitura de argumentos e configuração compartilhada pelos scripts PRF. */
+
 
 export interface PrfCliArguments {
     positional: string[];
@@ -16,7 +16,7 @@ function parseYear(value: string): number {
     return year;
 }
 
-/** Aceita "2026", "2024,2026" e intervalos "2022-2026". */
+
 export function parseYearList(value: string | undefined): number[] | undefined {
     const text = value?.trim();
     if (!text) return undefined;

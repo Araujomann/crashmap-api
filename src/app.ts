@@ -16,18 +16,18 @@ import { adminPlugin } from "./modules/admin/admin.plugin.js";
 import { moderatorInviteAcceptRoutes } from "./modules/team/team.controller.js";
 
 export interface BuildAppOptions {
-    /** Padrão: `RATE_LIMIT_ENABLED` do ambiente. */
+    
     rateLimit?: boolean;
 }
 
 export async function buildApp(options: BuildAppOptions = {}) {
-    // trustProxy: de quem aceitar X-Forwarded-For para obter o IP real do
-    // cliente (auditoria e limites). Ver TRUST_PROXY em shared/config/env.ts.
+    
+    
     const app = Fastify({ logger: true, trustProxy: env.TRUST_PROXY });
 
     if (options.rateLimit ?? env.RATE_LIMIT_ENABLED) {
-        // global: false — só as rotas com `config.rateLimit` são limitadas.
-        // preHandler: o corpo já foi lido (o limite de login usa o e-mail).
+        
+        
         await app.register(rateLimit, {
             global: false,
             hook: "preHandler",
@@ -37,7 +37,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
     await registerApiDocs(app);
 
-    // Só origens listadas (CORS_ORIGINS). O painel usa o BFF e não precisa.
+    
     await app.register(cors, {
         origin: env.CORS_ORIGINS,
     });

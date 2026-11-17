@@ -1,4 +1,4 @@
-/** Maior página aceita pelas listagens. */
+
 export const MAX_PAGE_SIZE = 50;
 
 export interface PaginationQuery {
@@ -9,7 +9,7 @@ export interface PaginationQuery {
 export interface Pagination {
     page: number;
     limit: number;
-    /** Quantos registros pular (`skip` do Prisma). */
+    
     skip: number;
 }
 
@@ -20,10 +20,10 @@ export interface PaginationMeta {
     totalPages: number;
 }
 
-/**
- * Normaliza página e tamanho vindos da query: página mínima 1, tamanho entre
- * 1 e `MAX_PAGE_SIZE`, com o padrão próprio de cada listagem.
- */
+
+
+
+
 export function resolvePagination(
     query: PaginationQuery,
     defaultLimit: number,
@@ -34,7 +34,7 @@ export function resolvePagination(
     return { page, limit, skip: (page - 1) * limit };
 }
 
-/** Bloco `pagination` das respostas (sempre ao menos uma página). */
+
 export function buildPaginationMeta(
     { page, limit }: Pick<Pagination, "page" | "limit">,
     total: number,

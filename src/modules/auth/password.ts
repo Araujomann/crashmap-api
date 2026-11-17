@@ -3,7 +3,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_KEY_BYTES = 64;
 
-/** Hash `salt:chave` com scrypt. */
+
 export function hashPassword(password: string): string {
     const salt = randomBytes(PASSWORD_SALT_BYTES).toString("hex");
     const derivedKey = scryptSync(password, salt, PASSWORD_KEY_BYTES).toString(

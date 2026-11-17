@@ -22,8 +22,8 @@ import type {
     ModeratorInvite,
 } from "./team.types.js";
 
-// Validade e limite diário por e-mail vêm das configurações da plataforma
-// (`invite_ttl_hours`, `invite_max_sends_per_day`).
+
+
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_INVITES_PER_ADMIN_PER_HOUR = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -208,8 +208,8 @@ export async function createInvite(
             );
         }
 
-        // Convite vencido ainda ocupa o índice "um em aberto por e-mail":
-        // o sistema o encerra antes de criar o novo.
+        
+        
         if (open) {
             await transaction.moderatorInvite.update({
                 where: { id: open.id },
@@ -250,7 +250,7 @@ export async function createInvite(
     return deliver(toInvite(invite), token, actor, logger);
 }
 
-/** Gera um novo link (o antigo deixa de valer) e reenvia o e-mail. */
+
 export async function resendInvite(
     actor: AuthUser,
     inviteId: string,
@@ -379,11 +379,11 @@ export async function revokeInvite(
 const INVALID_INVITE = () =>
     new AppError("Convite inválido ou expirado", 410, "INVITE_INVALID");
 
-/**
- * Consome o convite e promove a conta autenticada a moderador. Respostas
- * iguais para convite inexistente, vencido, revogado ou já usado, para não
- * revelar o estado de um token.
- */
+
+
+
+
+
 export async function acceptInvite(
     user: AuthUser,
     token: string,
@@ -408,7 +408,7 @@ export async function acceptInvite(
             );
         }
 
-        // Consumo atômico: em uma corrida, só um aceite vence.
+        
         const consumed = await transaction.moderatorInvite.updateMany({
             where: {
                 id: invite.id,
@@ -420,7 +420,7 @@ export async function acceptInvite(
         });
         if (consumed.count !== 1) throw INVALID_INVITE();
 
-        // Nunca rebaixa: admin que aceita continua admin.
+        
         await transaction.user.updateMany({
             where: { id: user.id, role: "user" },
             data: { role: "moderator" },

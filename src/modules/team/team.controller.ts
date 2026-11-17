@@ -37,7 +37,7 @@ import type {
 
 type IdParams = { Params: { id: string } };
 
-// Registradas dentro de `adminPlugin` com prefixo /moderator-invites.
+
 export const moderatorInvitesAdminRoutes: FastifyPluginAsync = async (app) => {
     app.get<{ Querystring: ListInvitesQuery }>(
         "/",
@@ -124,7 +124,7 @@ export const moderatorInvitesAdminRoutes: FastifyPluginAsync = async (app) => {
     );
 };
 
-// Registradas dentro de `adminPlugin` com prefixo /moderators.
+
 export const moderatorsAdminRoutes: FastifyPluginAsync = async (app) => {
     app.get(
         "/",
@@ -165,7 +165,7 @@ export const moderatorsAdminRoutes: FastifyPluginAsync = async (app) => {
     );
 };
 
-// Fora de /admin: quem aceita ainda é `user`. Prefixo /moderator-invites.
+
 export const moderatorInviteAcceptRoutes: FastifyPluginAsync = async (app) => {
     app.post<{ Body: AcceptInviteBody }>(
         "/accept",

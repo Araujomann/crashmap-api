@@ -1,21 +1,21 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { AppError } from "../errors/app-error.js";
 
-/**
- * Converte qualquer erro no formato de erro da API:
- * `{ error: { code, message, statusCode } }`.
- *
- * - `AppError`: usa o próprio status, código e mensagem;
- * - falha de validação do schema: 400 `VALIDATION_ERROR`;
- * - qualquer outro: 500 `INTERNAL_SERVER_ERROR`, sem detalhes internos.
- */
+
+
+
+
+
+
+
+
 export async function apiErrorHandler(
     error: FastifyError,
     request: FastifyRequest,
     reply: FastifyReply,
 ) {
-    // Recusa esperada (4xx: senha errada, sem permissão, limite) não é
-    // falha do servidor: fica em "info" para não poluir os alertas.
+    
+    
     if (error instanceof AppError && error.statusCode < 500) {
         request.log.info(
             { code: error.code, statusCode: error.statusCode },

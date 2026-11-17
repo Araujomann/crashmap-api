@@ -8,7 +8,7 @@ import {
 } from "./settings.schema.js";
 import { listSettings, updateSettings } from "./settings.service.js";
 
-// Registradas dentro de `adminPlugin` com prefixo /settings — permissão settings:manage.
+
 export const settingsRoutes: FastifyPluginAsync = async (app) => {
     app.get(
         "/",

@@ -6,7 +6,7 @@ import {
 } from "./audit-log.schema.js";
 import { listAuditLogs, type AuditLogQuery } from "./audit-log.service.js";
 
-// Registradas dentro de `adminPlugin` com prefixo /audit-logs — permissão audit:read.
+
 export const auditLogRoutes: FastifyPluginAsync = async (app) => {
     app.get<{ Querystring: AuditLogQuery }>(
         "/",

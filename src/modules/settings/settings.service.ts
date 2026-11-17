@@ -4,10 +4,10 @@ import type { Prisma } from "../../../generated/prisma/client.js";
 import type { AuthUser } from "../auth/auth.types.js";
 import { recordAudit, type AuditContext } from "../audit/audit.service.js";
 
-/**
- * Chaves conhecidas. Só estas podem ser gravadas; valor ausente ou inválido no
- * banco cai no padrão. Para uma configuração nova, basta acrescentar aqui.
- */
+
+
+
+
 export const SETTING_DEFINITIONS = {
     invite_ttl_hours: {
         default: 72,
@@ -40,7 +40,7 @@ function isValid(key: SettingKey, value: unknown): value is number {
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-/** Valores efetivos (banco + padrões). */
+
 export async function getSettings(db: Db = prisma): Promise<PlatformSettings> {
     const rows = await db.platformSetting.findMany({
         where: { key: { in: SETTING_KEYS } },

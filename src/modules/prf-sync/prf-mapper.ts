@@ -4,10 +4,10 @@ import type {
     PrfMapResult,
 } from "./prf-sync.types.js";
 
-/**
- * Identificação geográfica usada pela própria PRF: a fonte não traz código
- * IBGE, apenas o nome do município e a UF em texto.
- */
+
+
+
+
 export const PRF_TARGET_UF = "MA";
 export const PRF_TARGET_MUNICIPALITY = "IMPERATRIZ";
 
@@ -37,7 +37,7 @@ function parseCount(value: string | undefined): number {
     return Number.parseInt(value ?? "0", 10) || 0;
 }
 
-/** Fuso em que a PRF registra data e hora das ocorrências de Imperatriz–MA. */
+
 export const PRF_TIME_ZONE = "America/Sao_Paulo";
 
 const prfWallClockFormatter = new Intl.DateTimeFormat("en-US", {
@@ -51,7 +51,7 @@ const prfWallClockFormatter = new Intl.DateTimeFormat("en-US", {
     second: "2-digit",
 });
 
-/** Data e hora de `instant` no fuso da PRF, lidas como se fossem UTC. */
+
 function prfWallClockAsUtc(instant: Date): number {
     const parts = Object.fromEntries(
         prfWallClockFormatter
@@ -69,15 +69,15 @@ function prfWallClockAsUtc(instant: Date): number {
     );
 }
 
-/** Ano civil de `instant` no fuso da PRF. */
+
 export function prfLocalYear(instant: Date): number {
     return new Date(prfWallClockAsUtc(instant)).getUTCFullYear();
 }
 
-/**
- * Data (dd/mm/aaaa ou aaaa-mm-dd) e hora da PRF, que são o horário local de
- * Brasília. Devolve o instante real (UTC): 15/01 06:40 vira 09:40Z.
- */
+
+
+
+
 export function parseDateAndHour(
     dateValue: string | undefined,
     timeValue: string | undefined,
@@ -85,9 +85,9 @@ export function parseDateAndHour(
     const wallClock = parseWallClock(dateValue, timeValue);
     if (wallClock === null) return null;
 
-    // Diferença entre o relógio local e o UTC naquele instante (hoje −3h;
-    // anos antigos tinham horário de verão). Recalcula uma vez para acertar
-    // as datas próximas da troca de horário.
+    
+    
+    
     let instant = wallClock.getTime();
     for (let i = 0; i < 2; i++) {
         const offset = prfWallClockAsUtc(new Date(instant)) - instant;
@@ -97,7 +97,7 @@ export function parseDateAndHour(
     return new Date(instant);
 }
 
-/** Data e hora como estão no CSV, guardadas nos campos UTC do `Date`. */
+
 function parseWallClock(
     dateValue: string | undefined,
     timeValue: string | undefined,
@@ -178,11 +178,11 @@ export function buildSourceRecordKey(sourceYear: number, id: string): string {
     return `${sourceYear}:${id}`;
 }
 
-/**
- * Converte uma linha da PRF para o formato do `Accident`. As regras de
- * transformação (severidade, classificação, clima, descrição) são as mesmas
- * do importador manual anterior.
- */
+
+
+
+
+
 export function mapPrfRow(row: PrfCsvRow, sourceYear: number): PrfMapResult {
     if (!isTargetMunicipality(row)) return { kind: "skipped" };
 

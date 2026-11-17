@@ -6,7 +6,7 @@ import { pipeline } from "node:stream/promises";
 import unzipper from "unzipper";
 import type { FetchLike, PrfSyncLogger } from "./prf-sync.types.js";
 
-/** Página oficial (catálogo) dos dados abertos da PRF. */
+
 export const PRF_CATALOG_URL =
     "https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf";
 
@@ -33,10 +33,10 @@ function isRetryableStatus(status: number) {
     return status === 408 || status === 429 || status >= 500;
 }
 
-/**
- * `fetch` com tempo-limite e novas tentativas (espera exponencial) para
- * falhas de rede, 408, 429 e 5xx. Outros 4xx falham na hora.
- */
+
+
+
+
 export async function fetchWithRetry(
     fetchImpl: FetchLike,
     url: string,
@@ -57,7 +57,7 @@ export async function fetchWithRetry(
                 signal: AbortSignal.timeout(options.timeoutMs),
             });
         } catch (error) {
-            // Falha de rede, DNS ou tempo-limite: vale tentar de novo.
+            
             lastError = error;
         }
 
@@ -99,11 +99,11 @@ function decodeHtmlEntities(value: string) {
         );
 }
 
-/**
- * Lê o HTML do catálogo e devolve, por ano, o primeiro link "Baixar
- * planilha" da linha "Documento CSV de Acidentes AAAA (Agrupados por
- * ocorrência)". A PRF não oferece API nem catálogo legível por máquina.
- */
+
+
+
+
+
 export function parsePrfCatalog(html: string): Map<number, string> {
     const links = new Map<number, string>();
     const rows = html.split(/<tr[\s>]/i);
@@ -175,7 +175,7 @@ function readRemoteInfo(response: Response): RemoteFileInfo {
     };
 }
 
-/** Metadados do arquivo remoto sem baixá-lo (HEAD). Falhas retornam `null`. */
+
 export async function headRemoteFile(
     fetchImpl: FetchLike,
     url: string,
@@ -209,7 +209,7 @@ export interface DownloadedFile extends RemoteFileInfo {
     bytes: number;
 }
 
-/** Baixa o arquivo, calcula SHA-256 e rejeita páginas HTML ou vazias. */
+
 export async function downloadPrfFile(
     fetchImpl: FetchLike,
     url: string,
@@ -273,10 +273,10 @@ export interface ExtractedCsv {
     entryName: string;
 }
 
-/**
- * Se o arquivo for ZIP, extrai o CSV de ocorrências (`datatranAAAA.csv`).
- * A detecção usa a assinatura do arquivo, não a extensão.
- */
+
+
+
+
 export async function extractPrfCsv(
     filePath: string,
     directory: string,
@@ -305,7 +305,7 @@ export async function extractPrfCsv(
     return { path: csvPath, entryName };
 }
 
-/** Ano indicado no nome do arquivo (`datatran2026.zip` → 2026). */
+
 export function yearFromFileName(name: string | null | undefined): number | null {
     const match = (name ?? "").match(/(20\d{2})/);
     return match ? Number(match[1]) : null;

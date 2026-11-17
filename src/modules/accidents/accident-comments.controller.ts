@@ -20,7 +20,7 @@ import {
 } from "./accident-comments.service.js";
 import type { CreateAccidentCommentBody } from "./accidents.types.js";
 
-/** Comentários de um relato aprovado. */
+
 export function registerCommentRoutes(app: FastifyInstance) {
     app.get<{ Params: { id: string } }>(
         "/:id/comments",

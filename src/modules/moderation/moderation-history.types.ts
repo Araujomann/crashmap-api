@@ -6,9 +6,9 @@ export interface ModerationHistoryQuery {
     moderatorId?: string;
     accidentId?: string;
     status?: ModerationDecisionStatus;
-    /** Data inicial (YYYY-MM-DD), inclusiva, em UTC. */
+    
     from?: string;
-    /** Data final (YYYY-MM-DD), inclusiva, em UTC. */
+    
     to?: string;
 }
 
@@ -16,7 +16,7 @@ export interface ModerationHistoryActor {
     id: string;
     name: string;
     email: string;
-    /** Conta removida e anonimizada; a autoria da decisão é preservada. */
+    
     is_deleted: boolean;
 }
 

@@ -25,7 +25,7 @@ const summarySelect = {
     suspended_by: { select: { id: true, name: true } },
 } as const;
 
-/** Contas ativas ou suspensas. Contas anonimizadas não aparecem. */
+
 export async function listUsers(query: AdminUsersQuery = {}) {
     const pagination = resolvePagination(query, 20);
     const search = query.search?.trim();
@@ -114,7 +114,7 @@ async function loadTarget(actor: AuthUser, targetId: string, action: string) {
     if (!target) {
         throw new AppError("User not found", 404, "USER_NOT_FOUND");
     }
-    // Admin não age sobre outro admin por aqui (evita um admin travar outro).
+    
     if (target.role === "admin") {
         throw new AppError(
             "Esta ação não pode ser aplicada a administradores",
@@ -125,7 +125,7 @@ async function loadTarget(actor: AuthUser, targetId: string, action: string) {
     return target;
 }
 
-/** Suspende a conta e encerra todas as sessões. */
+
 export async function suspendUser(
     actor: AuthUser,
     targetId: string,
@@ -222,7 +222,7 @@ export async function reactivateUser(
     return getUserDetail(targetId);
 }
 
-/** Encerra todas as sessões (força novo login em todos os aparelhos). */
+
 export async function revokeUserSessions(
     actor: AuthUser,
     targetId: string,

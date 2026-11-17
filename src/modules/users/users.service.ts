@@ -129,18 +129,18 @@ export async function updateMe(
     return toAuthUser(updatedUser);
 }
 
-/**
- * Exclui permanentemente a conta do usuário corrente.
- *
- * - Contas com senha precisam reconfirmá-la (reautenticação).
- * - Contas da equipe (moderador/admin) não podem ser excluídas por aqui: o
- *   histórico de moderação e os avisos administrativos dependem delas.
- * - Tokens, comentários, votos e imagens são removidos em cascata; os relatos
- *   permanecem no mapa sem autor (`created_by_id` → NULL).
- * - Ex-integrantes da equipe (rebaixados para `user`) que deixaram decisões de
- *   moderação ou avisos são anonimizados em vez de apagados: os dados pessoais
- *   somem, mas a autoria das decisões continua rastreável pelo mesmo `id`.
- */
+
+
+
+
+
+
+
+
+
+
+
+
 export async function deleteMe(
     userId: string,
     input: DeleteMeBody = {},
@@ -169,12 +169,12 @@ export async function deleteMe(
         }
 
         if (!verifyPassword(input.password, user.password_hash)) {
-            // 403 (e não 401) para não disparar a renovação de sessão no app.
+            
             throw new AppError("Invalid password", 403, "INVALID_PASSWORD");
         }
     }
 
-    // Tudo que referencia a conta com FK `Restrict` (trilha de staff).
+    
     const trail = await Promise.all([
         prisma.accidentModerationHistory.count({
             where: { moderated_by_id: userId },
@@ -202,11 +202,11 @@ export async function deleteMe(
 
 export const DELETED_ACCOUNT_NAME = "Conta removida";
 
-/**
- * Remove os dados pessoais e tudo que a exclusão normal removeria em cascata,
- * mas mantém a linha de `User` para não quebrar as FKs `Restrict` do histórico
- * de moderação e dos avisos.
- */
+
+
+
+
+
 async function anonymizeAccount(userId: string): Promise<void> {
     const where = { user_id: userId };
     const authored = { created_by_id: userId };

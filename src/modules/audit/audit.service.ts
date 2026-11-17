@@ -12,7 +12,7 @@ export type AuditTargetType =
     | "image"
     | "settings";
 
-/** De onde veio a ação: preenchido pelo controller a partir da requisição. */
+
 export interface AuditContext {
     ip: string | null;
     userAgent: string | null;
@@ -33,14 +33,14 @@ export interface AuditEntry {
     action: AuditAction;
     targetType: AuditTargetType;
     targetId: string | null;
-    /** Motivo, antes/depois, retrato do conteúdo. Nunca tokens ou senhas. */
+    
     metadata?: Prisma.InputJsonObject;
 }
 
-/**
- * Grava uma linha de auditoria. Sempre chamar com o cliente da transação da
- * própria ação: se a auditoria falhar, a ação também não acontece.
- */
+
+
+
+
 export async function recordAudit(
     db: Prisma.TransactionClient,
     entry: AuditEntry,

@@ -1,6 +1,6 @@
 import type { Prisma } from "../../../generated/prisma/client.js";
 
-/** `{ gte, lte }` com os limites informados, ou `undefined` se nenhum. */
+
 function closedRange<T>(min: T | undefined, max: T | undefined) {
     if (min === undefined && max === undefined) return undefined;
 
@@ -10,7 +10,7 @@ function closedRange<T>(min: T | undefined, max: T | undefined) {
     };
 }
 
-/** Busca sem diferenciar maiúsculas no título e na descrição do relato. */
+
 export function accidentTextSearchFilter(
     search: string | undefined,
 ): Prisma.AccidentWhereInput {
@@ -24,10 +24,10 @@ export function accidentTextSearchFilter(
     };
 }
 
-/**
- * Período da ocorrência e área do mapa (retângulo de latitude/longitude),
- * todos os limites inclusivos.
- */
+
+
+
+
 export function accidentPeriodAndAreaFilter(query: {
     from?: string;
     to?: string;
